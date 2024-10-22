@@ -32,9 +32,14 @@ class SignalMixer(QtWidgets.QWidget):
         self.frequency_input.setValue(5)  # Default frequency
 
         self.amplitude_input = QtWidgets.QDoubleSpinBox()
-        self.amplitude_input.setRange(0, 10)  # Amplitude range
+        self.amplitude_input.setRange(0, 10)  # pahse range
         self.amplitude_input.setDecimals(2)
-        self.amplitude_input.setValue(1)  # Default amplitude
+        self.amplitude_input.setValue(1)  # Default pahse
+
+        self.phase_input = QtWidgets.QDoubleSpinBox()
+        self.phase_input.setRange(-180, 180)  # Amplitude range
+        self.phase_input.setDecimals(2)
+        self.phase_input.setValue(0)  # Default amplitude
 
         # SNR Slider
         self.snr_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -66,6 +71,8 @@ class SignalMixer(QtWidgets.QWidget):
         layout.addWidget(self.frequency_input)
         layout.addWidget(QtWidgets.QLabel("Amplitude:"))
         layout.addWidget(self.amplitude_input)
+        layout.addWidget(QtWidgets.QLabel("Phase:"))
+        layout.addWidget(self.phase_input)
         layout.addWidget(add_button)
         layout.addWidget(remove_button)
         layout.addWidget(update_button)  # Add the update button
@@ -82,7 +89,8 @@ class SignalMixer(QtWidgets.QWidget):
     def add_signal(self):
         frequency = self.frequency_input.value()
         amplitude = self.amplitude_input.value()
-        self.signals.append((frequency, amplitude))
+        phase = self.phase_input.value()
+        self.signals.append((frequency, amplitude, phase))
         self.update_signal_list()
 
     def remove_signal(self):
@@ -98,8 +106,8 @@ class SignalMixer(QtWidgets.QWidget):
                 self.signal_list.addItem(f"Title: {signal.title}, Length: {len(signal.data)} samples")
             else:
                 # Assuming it's a tuple (frequency, amplitude) for composed signals
-                frequency, amplitude = signal
-                self.signal_list.addItem(f"Frequency: {frequency} Hz, Amplitude: {amplitude}")
+                frequency, amplitude, phase = signal
+                self.signal_list.addItem(f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}")
 
 
     def emit_update_signal(self):
@@ -112,10 +120,10 @@ class SignalMixer(QtWidgets.QWidget):
             if isinstance(signal, Signal):
                 # If the signal is an instance of Signal, use its data
                 mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
-            elif isinstance(signal, tuple) and len(signal) == 2:
+            elif isinstance(signal, tuple) and len(signal) == 3:
                 # Assuming it's a tuple (frequency, amplitude)
-                frequency, amplitude = signal
-                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time)
+                frequency, amplitude, phase = signal
+                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
             else:
                 # Handle unexpected signal formats if necessary
                 raise ValueError("Unsupported signal format: {}".format(signal))
