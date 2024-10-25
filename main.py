@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 from scipy.fft import fft, fftfreq  
 from scipy.interpolate import interp1d, CubicSpline, lagrange
@@ -13,6 +14,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         super().__init__()
         self.interp_method = None
         self.f_max = 0  
+        self.sampling_rate = 2
+
         self.initUI()
         self.mixer = SignalMixer() 
         self.max_time_axis = 1
@@ -42,7 +45,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         control_panel = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sampling_slider.setMinimum(2)
+        self.sampling_slider.setMinimum(self.sampling_rate)
         self.sampling_slider.setValue(1)
         self.sampling_slider.valueChanged.connect(self.update_sampling)
 
@@ -70,7 +73,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.signal = self.mixer.compose_signal(self.time)
         else:    
             f1 = 5  
-            f2 = 15  
+            f2 = 15 
             self.signal = np.sin(2 * np.pi * f1 * self.time) + 0.5 * np.sin(2 * np.pi * f2 * self.time)
         
         self.f_max = max(f1, f2) if not self.mixer.signals else max(f[0] for f in self.mixer.signals)        
@@ -84,7 +87,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.update_plots()  
 
     def update_sampling(self):
-        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  
+        self.sampling_rate = self.sampling_slider.value()
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")  
         self.sample_and_reconstruct()
 
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
@@ -138,8 +142,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def sample_and_reconstruct(self):
         if self.interp_method is None:
             self.update_reconstruction_method()
-        sampling_rate = self.sampling_slider.value()
-        sample_points = np.linspace(0, len(self.time) - 1, sampling_rate * self.max_time_axis).astype(int)
+
+        sample_points = np.linspace(0, len(self.time) - 1, self.sampling_rate * self.max_time_axis).astype(int)
         sampled_time = self.time[sample_points]
         sampled_signal = self.signal[sample_points]
 
@@ -164,18 +168,28 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
             
             error = self.signal - reconstructed_signal
+            text = f'Absolute Error: {round(np.sum(np.abs(error)), 2)}'
+            text_item = pg.TextItem(text, anchor=(0, 5), color='w')
+            self.error_plot.addItem(text_item, ignoreBounds=True)
+            text_item.setPos(self.time[0], self.signal[0])  # Position the text
             self.error_plot.plot(self.time, error, pen='r')
+
+            freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
+            fft_original = np.abs(fft(reconstructed_signal))
+
+            fft_original[1:] *= 2  
+            fft_original /= len(self.time)  
+            # self.sampling_slider.setMaximum(4 * self.f_max)
+            self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
 
         
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
         fft_original = np.abs(fft(self.signal))
-
         
         fft_original[1:] *= 2  
         fft_original /= len(self.time)  
-
+        # self.sampling_slider.setMaximum(4 * self.f_max)
         self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen='y')
-
         
         self.set_same_viewing_range()
     
@@ -192,6 +206,15 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot.setYRange(y_min, y_max)
 
         self.frequency_plot.setXRange(0, 2 * self.f_max)  
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Left and self.sampling_rate > 2:
+            self.sampling_rate -= 1
+            self.sample_and_reconstruct() 
+        elif event.key() == Qt.Key_Right and self.sampling_rate < len(self.signal):
+            self.sampling_rate += 1
+            self.sample_and_reconstruct()     
+        print('Sampling rate:', self.sampling_rate)   
 
     def closeEvent(self, event):
         self.mixer.close()  
