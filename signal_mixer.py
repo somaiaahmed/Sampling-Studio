@@ -28,49 +28,38 @@ class SignalMixer(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.frequency_input = QtWidgets.QSpinBox()
-        self.frequency_input.setRange(0, 100)  # Frequency range
-        #self.frequency_input.setDecimals(2)
-        self.frequency_input.setValue(5)  # Default frequency
+        self.frequency_input.setRange(0, 100) 
+        self.frequency_input.setValue(5) 
 
         self.amplitude_input = QtWidgets.QSpinBox()
-        self.amplitude_input.setRange(0, 10)  # phase range
-        #self.amplitude_input.setDecimals(2)
-        self.amplitude_input.setValue(1)  # Default phase
+        self.amplitude_input.setRange(0, 10)  
+        self.amplitude_input.setValue(1) 
 
         self.phase_input = QtWidgets.QSpinBox()
-        self.phase_input.setRange(-180, 180)  # Amplitude range
-        #self.phase_input.setDecimals(2)
-        self.phase_input.setValue(0)  # Default amplitude
+        self.phase_input.setRange(-180, 180) 
+        self.phase_input.setValue(0)  
 
-        # SNR Slider
+        #SNR slider :
         self.snr_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.snr_slider.setRange(0, 100)  # SNR range in dB
-        self.snr_slider.setValue(20)  # Default SNR level
+        self.snr_slider.setRange(0, 100) 
+        self.snr_slider.setValue(20)  
         self.snr_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.snr_slider.setTickInterval(10)
 
         self.snr_label = QtWidgets.QLabel("SNR Level: 20 dB")
-        # Connect SNR slider to update label
         self.snr_slider.valueChanged.connect(self.update_snr_label)
-
 
         add_button = QtWidgets.QPushButton("Add Signal")
         add_button.clicked.connect(self.add_signal)
-
-        add_component_button = QtWidgets.QPushButton("Add Component")
-        add_component_button.clicked.connect(self.add_component)
-
 
         remove_button = QtWidgets.QPushButton("Remove")
         remove_button.setObjectName("removeButton")
         remove_button.clicked.connect(self.remove_signal)
 
         import_button = QtWidgets.QPushButton("Import Signals")
-        import_button.clicked.connect(self.import_signal_file)  # Connect to import function
+        import_button.clicked.connect(self.import_signal_file) 
 
-
-        self.signal_list = QTreeWidget()
-        self.signal_list.setHeaderHidden(True)
+        self.signal_list = QtWidgets.QListWidget()
 
         
         layout.addWidget(self.signal_list)
@@ -86,7 +75,6 @@ class SignalMixer(QtWidgets.QWidget):
         control_container_layout.addWidget(self.phase_input)
 
         control_container_layout.addWidget(add_button)
-        control_container_layout.addWidget(add_component_button)
         control_container_layout.addWidget(remove_button)
         control_container_layout.addWidget(import_button)
         
@@ -110,76 +98,57 @@ class SignalMixer(QtWidgets.QWidget):
 
 
     def add_signal(self):
-        self.signals.append([])
-        self.update_signal_list()
-        self.emit_update_signal()
-
-    def add_component(self):
-        if not self.signals:
-            self.add_signal()
-
-        frequency = self.frequency_input.value()
+        frequency = self.frequency_input.value()    
         amplitude = self.amplitude_input.value()
         phase = self.phase_input.value()
-        
-        self.signals[-1].append((frequency, amplitude, phase))
+        self.signals.append((frequency, amplitude, phase))
         self.update_signal_list()
-        self.emit_update_signal()
+        self.emit_update_signal()  # Emit the signal to update the graph
 
     def remove_signal(self):
-        selected_item = self.signal_list.currentItem()
+        selected_item = self.signal_list.currentItem()  # Get the currently selected item
         if selected_item:
-            parent = selected_item.parent()
-            
-            if parent:
-                index = parent.indexOfChild(selected_item)
-                parent.takeChild(index)
-                # Remove component from signals list
-                signal_index = self.signal_list.indexOfTopLevelItem(parent)
-                if signal_index >= 0 and signal_index < len(self.signals):
-                    del self.signals[signal_index][index]
-            else:
-                # Top level item (signal)
-                index = self.signal_list.indexOfTopLevelItem(selected_item)
-                if index >= 0 and index < len(self.signals):
-                    self.signals.pop(index)
-                    self.signal_list.takeTopLevelItem(index)
+            index = self.signal_list.row(selected_item)  # Get the index of the selected item
+            if index < len(self.signals):  # Check if the index is valid
+                self.signals.pop(index)  # Remove the selected signal
+                self.update_signal_list()  # Update the display
+                self.emit_update_signal()  # Emit the signal to update the graph
 
-        self.emit_update_signal()
+            # Check if all signals have been removed
+            if not self.signals:
+                self.mixed_signal = np.zeros_like(self.time)  # Reset to y = 0
+                self.emit_update_signal()  # Emit the signal to update the graph
+
 
 
     def update_signal_list(self):
         self.signal_list.clear()
-        for i, signal in enumerate(self.signals):
-            signal_item = QTreeWidgetItem([f"Signal {i}"])
-            
-            for component in signal:
-                frequency, amplitude, phase = component
-                component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
-                signal_item.addChild(QTreeWidgetItem([component_text]))
-
-            # Add the signal item as a top-level item in the tree
-            self.signal_list.addTopLevelItem(signal_item)
+        for signal in self.signals:
+            if isinstance(signal, Signal):
+                # For imported Signal objects, display the title and length
+                self.signal_list.addItem(f"Title: {signal.title}, Length: {len(signal.data)} samples")
+            else:
+                # Assuming it's a tuple (frequency, amplitude) for composed signals
+                frequency, amplitude, phase = signal
+                self.signal_list.addItem(f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}")
 
 
     def emit_update_signal(self):
         self.update_signal.emit()  # Emit the signal to notify the main app
 
     def compose_signal(self, time):
-        """Compose the mixed signal based on the current signals."""
         mixed_signal = np.zeros_like(time, dtype=float)  # Initialize as float to avoid casting issues
         
         for signal in self.signals:
             if isinstance(signal, Signal):
-                # If the signal is an instance of Signal, use its data
-                mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
-            elif isinstance(signal, list):  # Check if the signal is a list of components
-                for component in signal:
-                    if isinstance(component, tuple) and len(component) == 3:
-                        frequency, amplitude, phase = component
-                        mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
-                    else:
-                        raise ValueError("Unsupported component format: {}".format(component))
+                if len(signal.data) != len(time):
+                    signal_data = np.resize(signal.data, time.shape)
+                else:
+                    signal_data = signal.data
+                mixed_signal += signal_data  
+            elif isinstance(signal, tuple) and len(signal) == 3:
+                frequency, amplitude, phase = signal
+                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 180)
             else:
                 raise ValueError("Unsupported signal format: {}".format(signal))
 
@@ -189,7 +158,6 @@ class SignalMixer(QtWidgets.QWidget):
 
     
     def add_noise(self, signal, snr_db):
-        """Add additive noise to the signal based on the specified SNR level."""
         snr_linear = 10 ** (snr_db / 10.0)
         signal_power = np.mean(signal ** 2)
         noise_power = signal_power / snr_linear
@@ -249,14 +217,4 @@ class SignalMixer(QtWidgets.QWidget):
         b = random.randint(128, 255)
         return (r, g, b)
 
-    # Add this method to your SignalMixer class
-    def plot_signal(self, signal):
-        """Plot the given signal using Matplotlib."""
-        plt.figure(figsize=(10, 5))  # Create a new figure
-        plt.plot(signal.time_axis, signal.data, color=signal.color, label=signal.title)
-        plt.title(signal.title)
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.legend()
-        plt.grid()
-        plt.show()
+

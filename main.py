@@ -42,6 +42,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot = pg.PlotWidget(
             title="Error (Original - Reconstructed)")
         self.frequency_plot = pg.PlotWidget(title="Frequency Domain")
+        
         style_plot_widget(self.original_plot)
         style_plot_widget(self.reconstructed_plot)
         style_plot_widget(self.error_plot)
@@ -77,7 +78,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         control_panel.addWidget(self.sampling_label)
         layout.addLayout(control_panel)
 
-
         reconstruction_layout = QtWidgets.QHBoxLayout()
         self.reconstruction_method_label = QtWidgets.QLabel("Reconstruction Method: ")
         reconstruction_layout.addWidget(self.reconstruction_method_label)
@@ -101,26 +101,28 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def generate_signal(self):
         if self.mixer.signals:
             self.signal = self.mixer.compose_signal(self.time)
+            self.f_max = max((f[0] for f in self.mixer.signals if isinstance(f, tuple)), default=0)
         else:    
             f1 = 5  
             f2 = 15 
             self.signal = np.sin(2 * np.pi * f1 * self.time) + 0.5 * np.sin(2 * np.pi * f2 * self.time)
-        
-        self.f_max = max(f1, f2) if not self.mixer.signals else max(f[0] for f in self.mixer.signals)   
+            self.f_max = max(f1, f2)
         self.update_sampling_slider()
-     
-        #self.sampling_slider.setMaximum(4 * self.f_max)
-
         self.update_plots()
 
     def update_original_signal(self):
         """Update the original signal based on the mixer contents."""
-        self.signal = self.mixer.compose_signal(self.time)  
-        self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals        
-        self.update_sampling_slider()
-        self.update_plots()  
-        self.signal = self.mixer.compose_signal(self.time)
-        self.update_plots()
+        if not self.mixer.signals:  # Check if there are no signals left
+            self.signal = np.zeros_like(self.time)  # Set the signal to zero
+            self.original_plot.clear()  # Clear the original plot
+        else:
+            self.signal = self.mixer.compose_signal(self.time)
+            self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals
+            self.update_sampling_slider()
+            self.update_plots()
+
+        self.update_plots()  # Update the plots even if signals are removed to ensure everything is cleared
+
 
     def update_sampling_slider(self):
         """Reconfigure the sampling slider based on the current f_max."""
