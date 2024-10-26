@@ -3,7 +3,7 @@ import random
 from matplotlib import pyplot as plt
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QTreeWidget, QTreeWidgetItem
 
 from signal_construct import Signal
 
@@ -55,59 +55,113 @@ class SignalMixer(QtWidgets.QWidget):
         add_button = QtWidgets.QPushButton("Add Signal")
         add_button.clicked.connect(self.add_signal)
 
-        remove_button = QtWidgets.QPushButton("Remove Last Signal")
+        add_component_button = QtWidgets.QPushButton("Add Component")
+        add_component_button.clicked.connect(self.add_component)
+
+
+        remove_button = QtWidgets.QPushButton("Remove")
+        remove_button.setObjectName("removeButton")
         remove_button.clicked.connect(self.remove_signal)
 
         update_button = QtWidgets.QPushButton("Update Original Signal")
         update_button.clicked.connect(self.emit_update_signal)  # Connect to signal emission
 
-        import_button = QtWidgets.QPushButton("Import Signals from File")
+        import_button = QtWidgets.QPushButton("Import Signals")
         import_button.clicked.connect(self.import_signal_file)  # Connect to import function
 
 
-        self.signal_list = QtWidgets.QListWidget()
+        self.signal_list = QTreeWidget()
+        self.signal_list.setHeaderHidden(True)
 
-        layout.addWidget(QtWidgets.QLabel("Frequency (Hz):"))
-        layout.addWidget(self.frequency_input)
-        layout.addWidget(QtWidgets.QLabel("Amplitude:"))
-        layout.addWidget(self.amplitude_input)
-        layout.addWidget(QtWidgets.QLabel("Phase:"))
-        layout.addWidget(self.phase_input)
-        layout.addWidget(add_button)
-        layout.addWidget(remove_button)
-        layout.addWidget(update_button)  # Add the update button
-        layout.addWidget(import_button)   # Add the import button
-        layout.addWidget(QtWidgets.QLabel("Select SNR (dB):"))
-        layout.addWidget(self.snr_slider)
-        layout.addWidget(self.snr_label)
+        
         layout.addWidget(self.signal_list)
+
+        control_container = QtWidgets.QGroupBox("")
+        control_container_layout = QtWidgets.QVBoxLayout(control_container)
+
+        control_container_layout.addWidget(QtWidgets.QLabel("Frequency (Hz):"))
+        control_container_layout.addWidget(self.frequency_input)
+        control_container_layout.addWidget(QtWidgets.QLabel("Amplitude:"))
+        control_container_layout.addWidget(self.amplitude_input)
+        control_container_layout.addWidget(QtWidgets.QLabel("Phase:"))
+        control_container_layout.addWidget(self.phase_input)
+
+        control_container_layout.addWidget(add_button)
+        control_container_layout.addWidget(add_component_button)
+        control_container_layout.addWidget(remove_button)
+        # control_container_layout.addWidget(update_button)
+        control_container_layout.addWidget(import_button)
+        
+        control_container_layout.addWidget(QtWidgets.QLabel("Select SNR (dB):"))
+        control_container_layout.addWidget(self.snr_slider)
+        control_container_layout.addWidget(self.snr_label)
+
+        control_container.setObjectName("control_container")
+
+        # Add the control_container to the main layout
+        layout.addWidget(control_container)
+        
+
+
+        with open("style/mixer.qss", "r") as f:
+            self.setStyleSheet(f.read())
 
     def update_snr_label(self):
         snr_value = self.snr_slider.value()
         self.snr_label.setText(f"SNR Level: {snr_value} dB")
 
     def add_signal(self):
+        
+        self.signals.append([])
+        self.update_signal_list()
+        self.emit_update_signal()
+
+    def add_component(self):
+        if not self.signals:
+            self.add_signal()
+
         frequency = self.frequency_input.value()
         amplitude = self.amplitude_input.value()
         phase = self.phase_input.value()
-        self.signals.append((frequency, amplitude, phase))
+        
+        self.signals[-1].append((frequency, amplitude, phase))
         self.update_signal_list()
+        self.emit_update_signal()
 
     def remove_signal(self):
-        if self.signals:
-            self.signals.pop()
-            self.update_signal_list()
+        selected_item = self.signal_list.currentItem()
+        if selected_item:
+            parent = selected_item.parent()
+            
+            if parent:
+                index = parent.indexOfChild(selected_item)
+                parent.takeChild(index)
+                # Remove component from signals list
+                signal_index = self.signal_list.indexOfTopLevelItem(parent)
+                if signal_index >= 0 and signal_index < len(self.signals):
+                    del self.signals[signal_index][index]
+            else:
+                # Top level item (signal)
+                index = self.signal_list.indexOfTopLevelItem(selected_item)
+                if index >= 0 and index < len(self.signals):
+                    self.signals.pop(index)
+                    self.signal_list.takeTopLevelItem(index)
+
+        self.emit_update_signal()
+
 
     def update_signal_list(self):
         self.signal_list.clear()
-        for signal in self.signals:
-            if isinstance(signal, Signal):
-                # For imported Signal objects, display the title and length
-                self.signal_list.addItem(f"Title: {signal.title}, Length: {len(signal.data)} samples")
-            else:
-                # Assuming it's a tuple (frequency, amplitude) for composed signals
-                frequency, amplitude, phase = signal
-                self.signal_list.addItem(f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}")
+        for i, signal in enumerate(self.signals):
+            signal_item = QTreeWidgetItem([f"Signal {i}"])
+            
+            for component in signal:
+                frequency, amplitude, phase = component
+                component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
+                signal_item.addChild(QTreeWidgetItem([component_text]))
+
+            # Add the signal item as a top-level item in the tree
+            self.signal_list.addTopLevelItem(signal_item)
 
 
     def emit_update_signal(self):
@@ -120,17 +174,20 @@ class SignalMixer(QtWidgets.QWidget):
             if isinstance(signal, Signal):
                 # If the signal is an instance of Signal, use its data
                 mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
-            elif isinstance(signal, tuple) and len(signal) == 3:
-                # Assuming it's a tuple (frequency, amplitude)
-                frequency, amplitude, phase = signal
-                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+            elif isinstance(signal, list):  # Check if the signal is a list of components
+                for component in signal:
+                    if isinstance(component, tuple) and len(component) == 3:
+                        frequency, amplitude, phase = component
+                        mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+                    else:
+                        raise ValueError("Unsupported component format: {}".format(component))
             else:
-                # Handle unexpected signal formats if necessary
                 raise ValueError("Unsupported signal format: {}".format(signal))
 
         # Add noise based on the selected SNR
-        snr_db = self.snr_slider.value()  # Get the selected SNR level
+        snr_db = self.snr_slider.value()  
         return self.add_noise(mixed_signal, snr_db)
+
     
     def add_noise(self, signal, snr_db):
         """Add additive noise to the signal based on the specified SNR level."""
