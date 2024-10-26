@@ -14,7 +14,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.interp_method = None
-        self.f_max = 0
+        self.f_max = 100
         self.sampling_rate = 2
         self.noise_signal = []
 
@@ -26,7 +26,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.signal = np.zeros_like(self.time)
         
         self.mixer.update_signal.connect(self.update_original_signal)  
-        self.mixer.update_noise.connect(self.add_noise)
+        self.mixer.update_noise.connect(self.sample_and_reconstruct)
 
 
 
@@ -109,10 +109,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.signal = self.mixer.compose_signal(self.time)
             # self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals
             self.update_sampling_slider()
-            self.update_plots()
 
-        self.update_plots()  # Update the plots even if signals are removed to ensure everything is cleared
-
+        self.sample_and_reconstruct()
 
     def update_sampling_slider(self):
         """Reconfigure the sampling slider based on the current f_max."""
@@ -178,12 +176,15 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.sample_and_reconstruct()
 
     def sample_and_reconstruct(self):
+        self.add_noise()
         if self.interp_method is None:
             self.update_reconstruction_method()
 
+        noised_signal = self.noise_signal + self.signal if len(self.noise_signal) == len(self.signal) else self.signal
+
         sample_points = np.linspace(0, len(self.time) - 1, self.sampling_rate * self.max_time_axis).astype(int)
         sampled_time = self.time[sample_points]
-        sampled_signal = self.signal[sample_points]
+        sampled_signal = noised_signal[sample_points]
 
         reconstructed_signal = self.interp_method(sampled_time, sampled_signal, self.time)
 
@@ -235,7 +236,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         signal_power = np.mean(self.signal ** 2)
         noise_power = signal_power / snr_linear
         self.noise_signal = np.random.normal(0, np.sqrt(noise_power), self.signal.shape)
-        self.sample_and_reconstruct()
 
     def set_same_viewing_range(self):
         x_min, x_max = min(self.time), max(self.time)
