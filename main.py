@@ -102,15 +102,28 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
     def update_original_signal(self):
         """Update the original signal based on the mixer contents."""
-        if not self.mixer.signals:  # Check if there are no signals left
-            self.signal = np.zeros_like(self.time)  # Set the signal to zero
+        if not self.mixer.signals:  # Check if there are no signals in the mixer
+            self.signal = np.zeros_like(self.time)  # Set the signal to zero if no signals are present
             self.original_plot.clear()  # Clear the original plot
+            self.f_max = 2  # Set a default frequency
         else:
+            # Compose the mixed signal from the mixer
             self.signal = self.mixer.compose_signal(self.time)
-            # self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals
-            self.update_sampling_slider()
+            
+            # Find the maximum frequency from all components for updating the sampling slider
+            max_frequency = [
+                component[0] for signal in self.mixer.signals
+                if isinstance(signal, list)  # Ensure the signal is a list of components
+                for component in signal
+                if isinstance(component, tuple) and len(component) == 3
+            ]
 
-        self.sample_and_reconstruct()
+            self.f_max = max(max_frequency) if max_frequency else 2  # Use the max frequency if found, else default to 2
+
+        self.update_sampling_slider()  # Update the sampling slider based on the new maximum frequency
+        self.sample_and_reconstruct()  # Re-sample and reconstruct the signal
+
+
 
     def update_sampling_slider(self):
         """Reconfigure the sampling slider based on the current f_max."""
