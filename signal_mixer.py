@@ -11,7 +11,7 @@ from signal_construct import Signal
 
 class SignalMixer(QtWidgets.QWidget):
     update_signal = QtCore.pyqtSignal()  # Define a signal to emit when updating
-
+    update_noise = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
         self.signals = []  # List to hold tuples of (frequency, amplitude)
@@ -44,7 +44,7 @@ class SignalMixer(QtWidgets.QWidget):
         # SNR Slider
         self.snr_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.snr_slider.setRange(0, 100)  # SNR range in dB
-        self.snr_slider.setValue(20)  # Default SNR level
+        self.snr_slider.setValue(100)  # Default SNR level
         self.snr_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.snr_slider.setTickInterval(10)
 
@@ -63,8 +63,8 @@ class SignalMixer(QtWidgets.QWidget):
         remove_button.setObjectName("removeButton")
         remove_button.clicked.connect(self.remove_signal)
 
-        update_button = QtWidgets.QPushButton("Update Original Signal")
-        update_button.clicked.connect(self.emit_update_signal)  # Connect to signal emission
+        # update_button = QtWidgets.QPushButton("Update Original Signal")
+        # update_button.clicked.connect(self.emit_update_signal)  # Connect to signal emission
 
         import_button = QtWidgets.QPushButton("Import Signals")
         import_button.clicked.connect(self.import_signal_file)  # Connect to import function
@@ -109,6 +109,7 @@ class SignalMixer(QtWidgets.QWidget):
     def update_snr_label(self):
         snr_value = self.snr_slider.value()
         self.snr_label.setText(f"SNR Level: {snr_value} dB")
+        self.update_noise.emit()
 
     def add_signal(self):
         
@@ -153,7 +154,7 @@ class SignalMixer(QtWidgets.QWidget):
     def update_signal_list(self):
         self.signal_list.clear()
         for i, signal in enumerate(self.signals):
-            signal_item = QTreeWidgetItem([f"Signal {i}"])
+            signal_item = QTreeWidgetItem([f"Signal {i+1}"])
             
             for component in signal:
                 frequency, amplitude, phase = component
@@ -184,18 +185,8 @@ class SignalMixer(QtWidgets.QWidget):
             else:
                 raise ValueError("Unsupported signal format: {}".format(signal))
 
-        # Add noise based on the selected SNR
-        snr_db = self.snr_slider.value()  
-        return self.add_noise(mixed_signal, snr_db)
+        return mixed_signal
 
-    
-    def add_noise(self, signal, snr_db):
-        """Add additive noise to the signal based on the specified SNR level."""
-        snr_linear = 10 ** (snr_db / 10.0)
-        signal_power = np.mean(signal ** 2)
-        noise_power = signal_power / snr_linear
-        noise = np.random.normal(0, np.sqrt(noise_power), signal.shape)
-        return signal + noise
         
     def import_signal_file(self):
         file_name, _ = QFileDialog.getOpenFileName()

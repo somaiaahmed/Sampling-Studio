@@ -16,6 +16,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.interp_method = None
         self.f_max = 0
         self.sampling_rate = 2
+        self.noise_signal = []
 
         self.mixer = SignalMixer()
         self.initUI()
@@ -23,6 +24,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.max_time_axis = 1
         self.time = np.linspace(0, self.max_time_axis, 1000)
         self.mixer.update_signal.connect(self.update_original_signal)
+        self.mixer.update_noise.connect(self.add_noise)
         self.generate_signal()
 
     def initUI(self):
@@ -181,7 +183,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot.clear()
         self.frequency_plot.clear()
 
-        self.original_plot.plot(self.time, self.signal,
+        noised_signal = self.noise_signal + self.signal if len(self.noise_signal) == len(self.signal) else self.signal
+        self.original_plot.plot(self.time, noised_signal,
                                 pen='#007AFF', name="Original Signal")
         if sampled_time is not None and sampled_signal is not None:
             self.original_plot.plot(
@@ -190,7 +193,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if reconstructed_signal is not None:
             self.reconstructed_plot.plot(self.time, reconstructed_signal, pen='#007AFF')
 
-            error = self.signal - reconstructed_signal
+            error = noised_signal - reconstructed_signal
             text = f'Absolute Error: {round(np.sum(np.abs(error)), 2)}'
             text_item = pg.TextItem(text, anchor=(0, 5), color='b')
             self.error_plot.addItem(text_item, ignoreBounds=True)
@@ -206,7 +209,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
 
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
-        fft_original = np.abs(fft(self.signal))
+        fft_original = np.abs(fft(noised_signal))
 
         fft_original[1:] *= 2
         fft_original /= len(self.time)
@@ -214,6 +217,13 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen='#007AFF')
 
         self.set_same_viewing_range()
+
+    def add_noise(self):
+        snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)
+        signal_power = np.mean(self.signal ** 2)
+        noise_power = signal_power / snr_linear
+        self.noise_signal = np.random.normal(0, np.sqrt(noise_power), self.signal.shape)
+        self.sample_and_reconstruct()
 
     def set_same_viewing_range(self):
         x_min, x_max = min(self.time), max(self.time)
