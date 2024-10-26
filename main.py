@@ -23,9 +23,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         self.max_time_axis = 1
         self.time = np.linspace(0, self.max_time_axis, 1000)
-        self.mixer.update_signal.connect(self.update_original_signal)
+        self.signal = np.zeros_like(self.time)
+        
+        self.mixer.update_signal.connect(self.update_original_signal)  
         self.mixer.update_noise.connect(self.add_noise)
-        self.generate_signal()
+
+
 
     def initUI(self):
         self.setWindowTitle("Signal Sampling and Recovery")
@@ -40,6 +43,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot = pg.PlotWidget(
             title="Error (Original - Reconstructed)")
         self.frequency_plot = pg.PlotWidget(title="Frequency Domain")
+        
         style_plot_widget(self.original_plot)
         style_plot_widget(self.reconstructed_plot)
         style_plot_widget(self.error_plot)
@@ -61,16 +65,20 @@ class SignalSamplingApp(QtWidgets.QWidget):
         # Add the horizontal layout to the main layout
         layout.addLayout(h_layout)
 
+        #slider for sampling:
         control_panel = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sampling_slider.setMinimum(self.sampling_rate)
-        self.sampling_slider.setValue(1)
+        self.sampling_slider.setMinimum(2)
+        self.sampling_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sampling_slider.setTickInterval(1)  
+        self.sampling_slider.setValue(self.sampling_rate)
         self.sampling_slider.valueChanged.connect(self.update_sampling)
         self.sampling_slider.setObjectName("samplingSlider")
 
-        self.sampling_label = QtWidgets.QLabel("Sampling Frequency: 10")
+        self.sampling_label = QtWidgets.QLabel(f"Sampling Frequency: {self.sampling_rate}")  
         control_panel.addWidget(self.sampling_slider)
         control_panel.addWidget(self.sampling_label)
+        layout.addLayout(control_panel)
 
         reconstruction_layout = QtWidgets.QHBoxLayout()
         self.reconstruction_method_label = QtWidgets.QLabel("Reconstruction Method: ")
@@ -92,30 +100,34 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def open_mixer(self):
         self.mixer.show()
 
-    def generate_signal(self):
-        if self.mixer.signals:
-            self.signal = self.mixer.compose_signal(self.time)
-        else:
-            f1 = 5
-            f2 = 15
-            self.signal = np.sin(2 * np.pi * f1 * self.time) + \
-                0.5 * np.sin(2 * np.pi * f2 * self.time)
-
-        self.f_max = max(f1, f2) if not self.mixer.signals else max(
-            f[0] for f in self.mixer.signals)
-        self.sampling_slider.setMaximum(4 * self.f_max)
-
-        self.update_plots()
-
     def update_original_signal(self):
         """Update the original signal based on the mixer contents."""
-        self.signal = self.mixer.compose_signal(self.time)
-        self.update_plots()
+        if not self.mixer.signals:  # Check if there are no signals left
+            self.signal = np.zeros_like(self.time)  # Set the signal to zero
+            self.original_plot.clear()  # Clear the original plot
+        else:
+            self.signal = self.mixer.compose_signal(self.time)
+            # self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals
+            self.update_sampling_slider()
+            self.update_plots()
+
+        self.update_plots()  # Update the plots even if signals are removed to ensure everything is cleared
+
+
+    def update_sampling_slider(self):
+        """Reconfigure the sampling slider based on the current f_max."""
+        self.sampling_slider.setMaximum(4 * self.f_max)  # Set the slider maximum to 4 times f_max
+        self.sampling_slider.setTickInterval(int(self.f_max))  # Update tick interval to f_max
+        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  # Adjust the current value to be within the new range
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  # Update the label
 
     def update_sampling(self):
         self.sampling_rate = self.sampling_slider.value()
-        self.sampling_label.setText(
-            f"Sampling Frequency: {self.sampling_rate}")
+        if self.sampling_rate < 2:
+            self.sampling_rate = 2
+
+        self.sampling_slider.setValue(self.sampling_rate)  # Reset the slider to 2
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")  
         self.sample_and_reconstruct()
 
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):

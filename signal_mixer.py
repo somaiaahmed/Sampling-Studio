@@ -17,7 +17,8 @@ class SignalMixer(QtWidgets.QWidget):
         self.signals = []  # List to hold tuples of (frequency, amplitude)
         self.initUI()
         self.max_length = 0  # Initialize max_length to 0
-
+        self.time = np.linspace(0, 1, 1000)  # Time array for plotting (adjust as needed)
+        self.mixed_signal = np.zeros_like(self.time)  # Initialize mixed signal
 
     def initUI(self):
         self.setWindowTitle("Signal Mixer")
@@ -26,30 +27,26 @@ class SignalMixer(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        self.frequency_input = QtWidgets.QDoubleSpinBox()
-        self.frequency_input.setRange(0, 100)  # Frequency range
-        self.frequency_input.setDecimals(2)
-        self.frequency_input.setValue(5)  # Default frequency
+        self.frequency_input = QtWidgets.QSpinBox()
+        self.frequency_input.setRange(0, 100) 
+        self.frequency_input.setValue(5) 
 
-        self.amplitude_input = QtWidgets.QDoubleSpinBox()
-        self.amplitude_input.setRange(0, 10)  # pahse range
-        self.amplitude_input.setDecimals(2)
-        self.amplitude_input.setValue(1)  # Default pahse
+        self.amplitude_input = QtWidgets.QSpinBox()
+        self.amplitude_input.setRange(0, 10)  
+        self.amplitude_input.setValue(1) 
 
-        self.phase_input = QtWidgets.QDoubleSpinBox()
-        self.phase_input.setRange(-180, 180)  # Amplitude range
-        self.phase_input.setDecimals(2)
-        self.phase_input.setValue(0)  # Default amplitude
+        self.phase_input = QtWidgets.QSpinBox()
+        self.phase_input.setRange(-180, 180) 
+        self.phase_input.setValue(0)  
 
-        # SNR Slider
+        #SNR slider :
         self.snr_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.snr_slider.setRange(0, 100)  # SNR range in dB
-        self.snr_slider.setValue(100)  # Default SNR level
+        self.snr_slider.setRange(0, 100) 
+        self.snr_slider.setValue(100)  
         self.snr_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.snr_slider.setTickInterval(10)
 
         self.snr_label = QtWidgets.QLabel("SNR Level: 20 dB")
-        # Connect SNR slider to update label
         self.snr_slider.valueChanged.connect(self.update_snr_label)
 
         add_button = QtWidgets.QPushButton("Add Signal")
@@ -58,17 +55,12 @@ class SignalMixer(QtWidgets.QWidget):
         add_component_button = QtWidgets.QPushButton("Add Component")
         add_component_button.clicked.connect(self.add_component)
 
-
         remove_button = QtWidgets.QPushButton("Remove")
         remove_button.setObjectName("removeButton")
         remove_button.clicked.connect(self.remove_signal)
 
-        # update_button = QtWidgets.QPushButton("Update Original Signal")
-        # update_button.clicked.connect(self.emit_update_signal)  # Connect to signal emission
-
         import_button = QtWidgets.QPushButton("Import Signals")
-        import_button.clicked.connect(self.import_signal_file)  # Connect to import function
-
+        import_button.clicked.connect(self.import_signal_file) 
 
         self.signal_list = QTreeWidget()
         self.signal_list.setHeaderHidden(True)
@@ -89,7 +81,6 @@ class SignalMixer(QtWidgets.QWidget):
         control_container_layout.addWidget(add_button)
         control_container_layout.addWidget(add_component_button)
         control_container_layout.addWidget(remove_button)
-        # control_container_layout.addWidget(update_button)
         control_container_layout.addWidget(import_button)
         
         control_container_layout.addWidget(QtWidgets.QLabel("Select SNR (dB):"))
@@ -164,7 +155,6 @@ class SignalMixer(QtWidgets.QWidget):
             # Add the signal item as a top-level item in the tree
             self.signal_list.addTopLevelItem(signal_item)
 
-
     def emit_update_signal(self):
         self.update_signal.emit()  # Emit the signal to notify the main app
 
@@ -186,7 +176,6 @@ class SignalMixer(QtWidgets.QWidget):
                 raise ValueError("Unsupported signal format: {}".format(signal))
 
         return mixed_signal
-
         
     def import_signal_file(self):
         file_name, _ = QFileDialog.getOpenFileName()
@@ -241,14 +230,4 @@ class SignalMixer(QtWidgets.QWidget):
         b = random.randint(128, 255)
         return (r, g, b)
 
-    # Add this method to your SignalMixer class
-    def plot_signal(self, signal):
-        """Plot the given signal using Matplotlib."""
-        plt.figure(figsize=(10, 5))  # Create a new figure
-        plt.plot(signal.time_axis, signal.data, color=signal.color, label=signal.title)
-        plt.title(signal.title)
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.legend()
-        plt.grid()
-        plt.show()
+
