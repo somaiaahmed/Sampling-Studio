@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
-
 from signal_construct import Signal
 
 
@@ -17,7 +16,8 @@ class SignalMixer(QtWidgets.QWidget):
         self.signals = []  # List to hold tuples of (frequency, amplitude)
         self.initUI()
         self.max_length = 0  # Initialize max_length to 0
-
+        self.time = np.linspace(0, 1, 1000)  # Time array for plotting (adjust as needed)
+        self.mixed_signal = np.zeros_like(self.time)  # Initialize mixed signal
 
     def initUI(self):
         self.setWindowTitle("Signal Mixer")
@@ -26,19 +26,19 @@ class SignalMixer(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        self.frequency_input = QtWidgets.QDoubleSpinBox()
+        self.frequency_input = QtWidgets.QSpinBox()
         self.frequency_input.setRange(0, 100)  # Frequency range
-        self.frequency_input.setDecimals(2)
+        #self.frequency_input.setDecimals(2)
         self.frequency_input.setValue(5)  # Default frequency
 
-        self.amplitude_input = QtWidgets.QDoubleSpinBox()
-        self.amplitude_input.setRange(0, 10)  # pahse range
-        self.amplitude_input.setDecimals(2)
-        self.amplitude_input.setValue(1)  # Default pahse
+        self.amplitude_input = QtWidgets.QSpinBox()
+        self.amplitude_input.setRange(0, 10)  # phase range
+        #self.amplitude_input.setDecimals(2)
+        self.amplitude_input.setValue(1)  # Default phase
 
-        self.phase_input = QtWidgets.QDoubleSpinBox()
+        self.phase_input = QtWidgets.QSpinBox()
         self.phase_input.setRange(-180, 180)  # Amplitude range
-        self.phase_input.setDecimals(2)
+        #self.phase_input.setDecimals(2)
         self.phase_input.setValue(0)  # Default amplitude
 
         # SNR Slider
@@ -52,14 +52,12 @@ class SignalMixer(QtWidgets.QWidget):
         # Connect SNR slider to update label
         self.snr_slider.valueChanged.connect(self.update_snr_label)
 
+
         add_button = QtWidgets.QPushButton("Add Signal")
         add_button.clicked.connect(self.add_signal)
 
-        remove_button = QtWidgets.QPushButton("Remove Last Signal")
+        remove_button = QtWidgets.QPushButton("Remove Signal")
         remove_button.clicked.connect(self.remove_signal)
-
-        update_button = QtWidgets.QPushButton("Update Original Signal")
-        update_button.clicked.connect(self.emit_update_signal)  # Connect to signal emission
 
         import_button = QtWidgets.QPushButton("Import Signals from File")
         import_button.clicked.connect(self.import_signal_file)  # Connect to import function
@@ -75,28 +73,34 @@ class SignalMixer(QtWidgets.QWidget):
         layout.addWidget(self.phase_input)
         layout.addWidget(add_button)
         layout.addWidget(remove_button)
-        layout.addWidget(update_button)  # Add the update button
         layout.addWidget(import_button)   # Add the import button
         layout.addWidget(QtWidgets.QLabel("Select SNR (dB):"))
         layout.addWidget(self.snr_slider)
         layout.addWidget(self.snr_label)
         layout.addWidget(self.signal_list)
 
+
     def update_snr_label(self):
         snr_value = self.snr_slider.value()
         self.snr_label.setText(f"SNR Level: {snr_value} dB")
 
+
     def add_signal(self):
-        frequency = self.frequency_input.value()
+        frequency = self.frequency_input.value()    
         amplitude = self.amplitude_input.value()
         phase = self.phase_input.value()
         self.signals.append((frequency, amplitude, phase))
         self.update_signal_list()
+        self.emit_update_signal()  # Emit the signal to update the graph
 
     def remove_signal(self):
-        if self.signals:
-            self.signals.pop()
-            self.update_signal_list()
+        selected_item = self.signal_list.currentItem()  # Get the currently selected item
+        if selected_item:
+            index = self.signal_list.row(selected_item)  # Get the index of the selected item
+            if index < len(self.signals):  # Check if the index is valid
+                self.signals.pop(index)  # Remove the selected signal
+                self.update_signal_list()  # Update the display
+                self.emit_update_signal()  # Emit the signal to update the graph
 
     def update_signal_list(self):
         self.signal_list.clear()
@@ -115,15 +119,24 @@ class SignalMixer(QtWidgets.QWidget):
 
     def compose_signal(self, time):
         """Compose the mixed signal based on the current signals."""
-        mixed_signal = np.zeros_like(time)
+        mixed_signal = np.zeros_like(time, dtype=float)  # Initialize as float to avoid casting issues
+        
         for signal in self.signals:
             if isinstance(signal, Signal):
                 # If the signal is an instance of Signal, use its data
-                mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
+                # Ensure the signal data matches the length of the time array
+                if len(signal.data) != len(time):
+                    # Resize the signal data to match the time length
+                    # You can choose to truncate or pad the signal data
+                    signal_data = np.resize(signal.data, time.shape)  # Resize or manipulate as needed
+                else:
+                    signal_data = signal.data
+                mixed_signal += signal_data  # Assumes signal.data is a numpy array of the same length as time
+                
             elif isinstance(signal, tuple) and len(signal) == 3:
                 # Assuming it's a tuple (frequency, amplitude)
                 frequency, amplitude, phase = signal
-                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+                mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 180)
             else:
                 # Handle unexpected signal formats if necessary
                 raise ValueError("Unsupported signal format: {}".format(signal))
@@ -193,14 +206,3 @@ class SignalMixer(QtWidgets.QWidget):
         b = random.randint(128, 255)
         return (r, g, b)
 
-    # Add this method to your SignalMixer class
-    def plot_signal(self, signal):
-        """Plot the given signal using Matplotlib."""
-        plt.figure(figsize=(10, 5))  # Create a new figure
-        plt.plot(signal.time_axis, signal.data, color=signal.color, label=signal.title)
-        plt.title(signal.title)
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.legend()
-        plt.grid()
-        plt.show()

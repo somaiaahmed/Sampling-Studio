@@ -22,6 +22,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.time = np.linspace(0, self.max_time_axis, 1000)
         self.mixer.update_signal.connect(self.update_original_signal)  
         self.generate_signal()  
+        self.sample_and_reconstruct()  #initial sampling & reconstruction
+
 
     def initUI(self):
         self.setWindowTitle("Signal Sampling and Recovery")
@@ -43,13 +45,16 @@ class SignalSamplingApp(QtWidgets.QWidget):
         grid_layout.addWidget(self.frequency_plot, 1, 1)
         layout.addLayout(grid_layout)
 
+        #slider for sampling:
         control_panel = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sampling_slider.setMinimum(self.sampling_rate)
-        self.sampling_slider.setValue(1)
+        self.sampling_slider.setMinimum(0)
+        self.sampling_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        self.sampling_slider.setTickInterval(1)  
+        self.sampling_slider.setValue(self.sampling_rate)
         self.sampling_slider.valueChanged.connect(self.update_sampling)
 
-        self.sampling_label = QtWidgets.QLabel("Sampling Frequency: 10")  
+        self.sampling_label = QtWidgets.QLabel(f"Sampling Frequency: {self.sampling_rate}")  
         control_panel.addWidget(self.sampling_slider)
         control_panel.addWidget(self.sampling_label)
         layout.addLayout(control_panel)
@@ -76,18 +81,33 @@ class SignalSamplingApp(QtWidgets.QWidget):
             f2 = 15 
             self.signal = np.sin(2 * np.pi * f1 * self.time) + 0.5 * np.sin(2 * np.pi * f2 * self.time)
         
-        self.f_max = max(f1, f2) if not self.mixer.signals else max(f[0] for f in self.mixer.signals)        
-        self.sampling_slider.setMaximum(4 * self.f_max)
+        self.f_max = max(f1, f2) if not self.mixer.signals else max(f[0] for f in self.mixer.signals)   
+        self.update_sampling_slider()
+     
+        #self.sampling_slider.setMaximum(4 * self.f_max)
 
         self.update_plots()
 
     def update_original_signal(self):
         """Update the original signal based on the mixer contents."""
         self.signal = self.mixer.compose_signal(self.time)  
+        self.f_max = max(f[0] for f in self.mixer.signals if isinstance(f, tuple))  # For tuple signals        
+        self.update_sampling_slider()
         self.update_plots()  
+
+    def update_sampling_slider(self):
+        """Reconfigure the sampling slider based on the current f_max."""
+        self.sampling_slider.setMaximum(4 * self.f_max)  # Set the slider maximum to 4 times f_max
+        self.sampling_slider.setTickInterval(int(self.f_max))  # Update tick interval to f_max
+        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  # Adjust the current value to be within the new range
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  # Update the label
 
     def update_sampling(self):
         self.sampling_rate = self.sampling_slider.value()
+        if self.sampling_rate < 2:
+            self.sampling_rate = 2
+
+        self.sampling_slider.setValue(self.sampling_rate)  # Reset the slider to 2
         self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")  
         self.sample_and_reconstruct()
 
@@ -159,7 +179,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         
         self.original_plot.plot(self.time, self.signal, pen='y', name="Original Signal")
-        if sampled_time is not None and sampled_signal is not None:
+        if sampled_time is not None and sampled_signal is not None:  #x and y coordinates of the sampled points
             self.original_plot.plot(sampled_time, sampled_signal, pen=None, symbol='o', symbolBrush='r')
 
         
