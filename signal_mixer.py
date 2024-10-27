@@ -59,8 +59,15 @@ class SignalMixer(QtWidgets.QWidget):
         remove_button.setObjectName("removeButton")
         remove_button.clicked.connect(self.remove_signal)
 
-        import_button = QtWidgets.QPushButton("Import Signals")
-        import_button.clicked.connect(self.import_signal_file) 
+        import_button = QtWidgets.QPushButton("Import")
+        import_button.clicked.connect(self.import_signal_file)
+
+        self.export_button = QtWidgets.QPushButton("Export") 
+
+        import_export_layout = QtWidgets.QHBoxLayout()
+        import_export_layout.addWidget(import_button)
+        import_export_layout.addWidget(self.export_button)
+
 
         self.signal_list = QTreeWidget()
         self.signal_list.setHeaderHidden(True)
@@ -82,7 +89,7 @@ class SignalMixer(QtWidgets.QWidget):
         control_container_layout.addWidget(add_button)
         control_container_layout.addWidget(add_component_button)
         control_container_layout.addWidget(remove_button)
-        control_container_layout.addWidget(import_button)
+        control_container_layout.addLayout(import_export_layout)
         
         control_container_layout.addWidget(QtWidgets.QLabel("Select SNR (dB):"))
         control_container_layout.addWidget(self.snr_slider)
@@ -146,15 +153,19 @@ class SignalMixer(QtWidgets.QWidget):
     def update_signal_list(self):
         self.signal_list.clear()
         for i, signal in enumerate(self.signals):
-            signal_item = QTreeWidgetItem([f"Signal {i+1}"])
             
-            for component in signal:
-                frequency, amplitude, phase = component
-                component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
-                signal_item.addChild(QTreeWidgetItem([component_text]))
+            if isinstance(signal, list):
+                signal_item = QTreeWidgetItem([f"Signal {i+1}"])
+                for component in signal:
+                    if isinstance(component, tuple) and len(component) == 3:
+                        frequency, amplitude, phase = component
+                        component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
+                        signal_item.addChild(QTreeWidgetItem([component_text]))
+                    elif isinstance(component, Signal):
+                        signal_item = QTreeWidgetItem([f"{component.title}"])
+                        # Add the signal item as a top-level item in the tree
+                        self.signal_list.addTopLevelItem(signal_item)
 
-            # Add the signal item as a top-level item in the tree
-            self.signal_list.addTopLevelItem(signal_item)
 
     def emit_update_signal(self):
         self.update_signal.emit()  # Emit the signal to notify the main app
@@ -188,6 +199,8 @@ class SignalMixer(QtWidgets.QWidget):
                 if isinstance(component, tuple) and len(component) == 3:
                     frequency, amplitude, phase = component
                     mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+                elif isinstance(component, Signal):
+                    mixed_signal += component.data
                 else:
                     raise ValueError("Unsupported component format: {}".format(component))
         elif isinstance(signal, tuple) and len(signal) == 3:
@@ -222,13 +235,12 @@ class SignalMixer(QtWidgets.QWidget):
         if signal_data.ndim == 1:
             new_signal = Signal(
                 signal_data=signal_data,
-                color=self.generate_random_light_color(),
                 title=os.path.splitext(os.path.basename(file_name))[0],
                 f_sample=sampling_rate
             )
 
             # Append the newly created Signal instance to the signals list
-            self.signals.append(new_signal)
+            self.signals.append([new_signal])
             self.update_signal_list()  # Update the display with the new signal
             self.max_length = max(self.max_length, len(signal_data))
             

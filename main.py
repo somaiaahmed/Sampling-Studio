@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QComboBox, QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 from scipy.fft import fft, fftfreq
@@ -16,7 +16,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.interp_method = None
         self.f_max = 100
         self.sampling_rate = 2
-        self.noise_signal = []
 
         self.mixer = SignalMixer()
         self.initUI()
@@ -24,9 +23,11 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.max_time_axis = 1
         self.time = np.linspace(0, self.max_time_axis, 1000)
         self.signal = np.zeros_like(self.time)
+        self.noise_signal = np.zeros_like(self.time)
         
         self.mixer.update_signal.connect(self.update_original_signal)  
         self.mixer.update_noise.connect(self.sample_and_reconstruct)
+        self.mixer.export_button.clicked.connect(self.export_signal)
 
 
 
@@ -272,6 +273,19 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.sampling_rate += 1
             self.sample_and_reconstruct()     
         print('Sampling rate:', self.sampling_rate)   
+
+    def export_signal(self):
+        # Open a file dialog to save the CSV file
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
+        
+        if file_name:
+            try:
+                signal = np.insert(self.signal + self.noise_signal, 0, self.sampling_rate)
+                np.savetxt(file_name, signal, delimiter=",", fmt='%d')
+                QMessageBox.information(self, "Success", "File saved successfully!")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An error occurred: {e}")
 
     def closeEvent(self, event):
         self.mixer.close()
