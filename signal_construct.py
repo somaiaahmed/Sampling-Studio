@@ -4,11 +4,8 @@ from PyQt5 import QtWidgets
 
 class Signal():
 
-    def __init__(self, signal_data, color='b', title='signal', is_hidden=False, f_sample=100):
+    def __init__(self, signal_data, f_sample=100):
         self.data = signal_data
-        self.color = color
-        self.title = title
-        self.is_hidden = is_hidden
         self.frequency = self.calculate_frequency()  # Calculate frequency on initialization
         self.f_sample = f_sample
         self.time_axis = np.linspace(0, len(signal_data) / self.f_sample, len(signal_data))

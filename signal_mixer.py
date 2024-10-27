@@ -64,6 +64,7 @@ class SignalMixer(QtWidgets.QWidget):
 
         self.signal_list = QTreeWidget()
         self.signal_list.setHeaderHidden(True)
+        self.signal_list.clicked.connect(self.emit_update_signal)
 
         
         layout.addWidget(self.signal_list)
@@ -139,7 +140,7 @@ class SignalMixer(QtWidgets.QWidget):
                     self.signals.pop(index)
                     self.signal_list.takeTopLevelItem(index)
 
-        self.emit_update_signal()
+            self.emit_update_signal()
 
 
     def update_signal_list(self):
@@ -161,19 +162,39 @@ class SignalMixer(QtWidgets.QWidget):
     def compose_signal(self, time):
         """Compose the mixed signal based on the current signals."""
         mixed_signal = np.zeros_like(time)
-        for signal in self.signals:
-            if isinstance(signal, Signal):
-                # If the signal is an instance of Signal, use its data
-                mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
-            elif isinstance(signal, list):  # Check if the signal is a list of components
-                for component in signal:
-                    if isinstance(component, tuple) and len(component) == 3:
-                        frequency, amplitude, phase = component
-                        mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
-                    else:
-                        raise ValueError("Unsupported component format: {}".format(component))
-            else:
-                raise ValueError("Unsupported signal format: {}".format(signal))
+        selected_item = self.signal_list.currentItem()
+        if selected_item:
+            parent = selected_item.parent()
+            
+            if parent:
+                index = parent.indexOfChild(selected_item)
+                
+                signal_index = self.signal_list.indexOfTopLevelItem(parent)
+                if signal_index >= 0 and signal_index < len(self.signals):
+                    signal = self.signals[signal_index][index]
+            else:                
+                index = self.signal_list.indexOfTopLevelItem(selected_item)
+                if index >= 0 and index < len(self.signals):
+                    signal = self.signals[index]
+                
+        elif self.signals:
+            signal = self.signals[-1]
+
+        if isinstance(signal, Signal):
+            # If the signal is an instance of Signal, use its data
+            mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
+        elif isinstance(signal, list):  # Check if the signal is a list of components
+            for component in signal:
+                if isinstance(component, tuple) and len(component) == 3:
+                    frequency, amplitude, phase = component
+                    mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+                else:
+                    raise ValueError("Unsupported component format: {}".format(component))
+        elif isinstance(signal, tuple) and len(signal) == 3:
+            frequency, amplitude, phase = signal
+            mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+        else:
+            raise ValueError("Unsupported signal format: {}".format(signal))
 
         return mixed_signal
         
