@@ -81,7 +81,24 @@ class SignalSamplingApp(QtWidgets.QWidget):
         control_panel.addWidget(self.sampling_slider)
         control_panel.addWidget(self.sampling_label)
         layout.addLayout(control_panel)
+        
+        # Add combobox for normalized frequency selection 
+        normalized_layout = QtWidgets.QHBoxLayout()
+        self.normalized_label = QtWidgets.QLabel("Normalized Frequency: ")
+        normalized_layout.addWidget(self.normalized_label)
 
+        control_panel.addLayout(normalized_layout)
+        layout.addLayout(control_panel)
+        
+        self.freq_comboBox = QComboBox()
+        # Add options from 0*f_max to 4*f_max
+        for i in range(5):
+            self.freq_comboBox.addItem(f"{i} * f_max", i)
+        self.freq_comboBox.setCurrentIndex(1)  # Default to 1 * f_max
+        self.freq_comboBox.currentIndexChanged.connect(self.update_sampling_from_combobox)
+        control_panel.addWidget(self.freq_comboBox)
+    
+        # Add reconstruction method combobox
         reconstruction_layout = QtWidgets.QHBoxLayout()
         self.reconstruction_method_label = QtWidgets.QLabel("Reconstruction Method: ")
         reconstruction_layout.addWidget(self.reconstruction_method_label)
@@ -99,6 +116,15 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         layout.addLayout(control_panel)
 
+    def update_sampling_from_combobox(self):
+        """Update sampling rate based on normalized frequency selected in the combobox."""
+        multiplier = self.freq_comboBox.currentData()  # Get the multiplier from the combobox
+        self.sampling_rate = max(2, int(multiplier * self.f_max))  # Calculate new sampling rate
+        self.sampling_slider.setValue(self.sampling_rate)  # Update slider position
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")
+        self.sample_and_reconstruct()  # Re-sample and reconstruct the signal
+        
+    
     def open_mixer(self):
         self.mixer.show()
 
