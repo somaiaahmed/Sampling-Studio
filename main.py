@@ -15,7 +15,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.interp_method = None
-        self.f_max = 100
+        self.f_max = 2
         self.sampling_rate = 2
 
         self.mixer = SignalMixer()
@@ -226,10 +226,14 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.reconstructed_plot.plot(self.time, reconstructed_signal, pen='#007AFF')
 
             error = noised_signal - reconstructed_signal
-            text = f'Absolute Error: {round(np.sum(np.abs(error)), 2)}'
-            text_item = pg.TextItem(text, anchor=(0, 5), color='b')
-            self.error_plot.addItem(text_item, ignoreBounds=True)
-            text_item.setPos(self.time[0], self.signal[0])  # Position the text
+            text = f' |error| : {round(np.sum(np.abs(error)), 2)}'
+            
+            title = f"""
+            <div style='text-align: center;'>
+                <span style='font-size: 10pt;'><b>Error Graph</b></span><br>
+                <span style='font-size: 8pt;'><b>{text}</b></span>
+            </div>"""
+            self.error_plot.setTitle(title)
             self.error_plot.plot(self.time, error, pen='#007AFF')
             freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
             fft_original = np.abs(fft(reconstructed_signal))
@@ -238,7 +242,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
             fft_original /= len(self.time)  
             # self.sampling_slider.setMaximum(4 * self.f_max)
             self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-
+        else:
+            self.error_plot.setTitle(f"Error Graph")
 
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
         fft_original = np.abs(fft(noised_signal))
