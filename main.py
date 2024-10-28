@@ -8,6 +8,7 @@ from scipy.fft import fft, fftfreq
 from scipy.interpolate import interp1d, CubicSpline, lagrange
 from signal_mixer import SignalMixer
 from style.styling_methods import style_plot_widget
+from signal_construct import Signal
 
 
 class SignalSamplingApp(QtWidgets.QWidget):
@@ -112,12 +113,16 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.signal = self.mixer.compose_signal(self.time)
             
             # Find the maximum frequency from all components for updating the sampling slider
-            max_frequency = [
-                component[0] for signal in self.mixer.signals
-                if isinstance(signal, list)  # Ensure the signal is a list of components
-                for component in signal
-                if isinstance(component, tuple) and len(component) == 3
-            ]
+            max_frequency = []
+
+            for signal in self.mixer.signals:
+                if isinstance(signal, list):  # Ensure the signal is a list of components
+                    for component in signal:
+                        if isinstance(component, tuple) and len(component) == 3:
+                            max_frequency.append(component[0])
+                        if isinstance(component, Signal):
+                            max_frequency.append(int(component.f_sample))
+
 
             self.f_max = max(max_frequency) if max_frequency else 2  # Use the max frequency if found, else default to 2
 
@@ -282,7 +287,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if file_name:
             try:
                 signal = np.insert(self.signal + self.noise_signal, 0, self.sampling_rate)
-                np.savetxt(file_name, signal, delimiter=",", fmt='%d')
+                np.savetxt(file_name, signal, delimiter=",")
                 QMessageBox.information(self, "Success", "File saved successfully!")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"An error occurred: {e}")

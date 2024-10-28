@@ -46,7 +46,7 @@ class SignalMixer(QtWidgets.QWidget):
         self.snr_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.snr_slider.setTickInterval(10)
 
-        self.snr_label = QtWidgets.QLabel("SNR Level: 20 dB")
+        self.snr_label = QtWidgets.QLabel(f"SNR Level: {self.snr_slider.value()} dB")
         self.snr_slider.valueChanged.connect(self.update_snr_label)
 
         add_button = QtWidgets.QPushButton("Add Signal")
@@ -106,8 +106,7 @@ class SignalMixer(QtWidgets.QWidget):
             self.setStyleSheet(f.read())
 
     def update_snr_label(self):
-        snr_value = self.snr_slider.value()
-        self.snr_label.setText(f"SNR Level: {snr_value} dB")
+        self.snr_label.setText(f"SNR Level: {self.snr_slider.value()} dB")
         self.update_noise.emit()
 
     def add_signal(self):
@@ -116,15 +115,35 @@ class SignalMixer(QtWidgets.QWidget):
         self.update_signal_list()
         self.emit_update_signal()
 
-    def add_component(self):
+    def add_component(self, imported_signal=None):
         if not self.signals:
             self.add_signal()
 
-        frequency = self.frequency_input.value()
-        amplitude = self.amplitude_input.value()
-        phase = self.phase_input.value()
-        
-        self.signals[-1].append((frequency, amplitude, phase))
+        if isinstance(imported_signal, Signal):
+            signal = imported_signal
+        else:
+            frequency = self.frequency_input.value()
+            amplitude = self.amplitude_input.value()
+            phase = self.phase_input.value()
+            signal = (frequency, amplitude, phase)
+
+        selected_item = self.signal_list.currentItem()
+        if selected_item:
+            parent = selected_item.parent()
+            
+            if parent:
+                index = parent.indexOfChild(selected_item)
+                parent.takeChild(index)
+                signal_index = self.signal_list.indexOfTopLevelItem(parent)
+                if signal_index >= 0 and signal_index < len(self.signals):
+                    self.signals[signal_index].append(signal)
+            else:
+                index = self.signal_list.indexOfTopLevelItem(selected_item)
+                if index >= 0 and index < len(self.signals):
+                    self.signals[index].append(signal)
+
+        else:
+            self.signals[-1].append(signal)
         self.update_signal_list()
         self.emit_update_signal()
 
@@ -153,18 +172,18 @@ class SignalMixer(QtWidgets.QWidget):
     def update_signal_list(self):
         self.signal_list.clear()
         for i, signal in enumerate(self.signals):
-            
-            if isinstance(signal, list):
-                signal_item = QTreeWidgetItem([f"Signal {i+1}"])
-                for component in signal:
-                    if isinstance(component, tuple) and len(component) == 3:
-                        frequency, amplitude, phase = component
-                        component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
-                        signal_item.addChild(QTreeWidgetItem([component_text]))
-                    elif isinstance(component, Signal):
-                        signal_item = QTreeWidgetItem([f"{component.title}"])
-                        # Add the signal item as a top-level item in the tree
-                        self.signal_list.addTopLevelItem(signal_item)
+            signal_item = QTreeWidgetItem([f"Signal {i+1}"])
+
+            for component in signal:
+                if isinstance(component, tuple) and len(component) == 3:
+                    frequency, amplitude, phase = component
+                    component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
+                    signal_item.addChild(QTreeWidgetItem([component_text]))
+                elif isinstance(component, Signal):
+                    # signal_item = QTreeWidgetItem([f"{component.title}"])
+                    # Add the signal item as a top-level item in the tree
+                    signal_item.addChild(QTreeWidgetItem([f"{component.title}"]))
+            self.signal_list.addTopLevelItem(signal_item)
 
 
     def emit_update_signal(self):
@@ -191,21 +210,20 @@ class SignalMixer(QtWidgets.QWidget):
         elif self.signals:
             signal = self.signals[-1]
 
-        if isinstance(signal, Signal):
-            # If the signal is an instance of Signal, use its data
-            mixed_signal += signal.data  # Assumes signal.data is a numpy array of the same length as time
-        elif isinstance(signal, list):  # Check if the signal is a list of components
+        if isinstance(signal, list):  # Check if the signal is a list of components
             for component in signal:
                 if isinstance(component, tuple) and len(component) == 3:
                     frequency, amplitude, phase = component
                     mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
                 elif isinstance(component, Signal):
-                    mixed_signal += component.data
+                    mixed_signal += component.data 
                 else:
                     raise ValueError("Unsupported component format: {}".format(component))
         elif isinstance(signal, tuple) and len(signal) == 3:
             frequency, amplitude, phase = signal
             mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+        elif isinstance(signal, Signal):
+            mixed_signal += signal.data 
         else:
             raise ValueError("Unsupported signal format: {}".format(signal))
 
@@ -240,8 +258,7 @@ class SignalMixer(QtWidgets.QWidget):
             )
 
             # Append the newly created Signal instance to the signals list
-            self.signals.append([new_signal])
-            self.update_signal_list()  # Update the display with the new signal
+            self.add_component(imported_signal=new_signal)
             self.max_length = max(self.max_length, len(signal_data))
             
             # Update the original graph with the newly imported signal
