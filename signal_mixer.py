@@ -178,7 +178,7 @@ class SignalMixer(QtWidgets.QWidget):
             for component in signal:
                 if isinstance(component, tuple) and len(component) == 3:
                     frequency, amplitude, phase = component
-                    component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
+                    component_text = f"Freq: {frequency} Hz, Amp: {amplitude}, Phase: {phase}"
                     signal_item.addChild(QTreeWidgetItem([component_text]))
                 elif isinstance(component, Signal):
                     #put signal item at top level of tree

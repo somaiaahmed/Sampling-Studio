@@ -1,6 +1,5 @@
 SignalMixer {
     background-color: white;
-    max-width: 60%;
     
 }
 
