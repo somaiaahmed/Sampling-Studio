@@ -14,7 +14,7 @@ class SignalMixer(QtWidgets.QWidget):
     update_noise = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
-        self.signals = []  # list of tuples: (frequency, amplitude)
+        self.signals = []  # list of tuples: (frequency, amplitude, phase)
         self.initUI()
         self.max_length = 0  
         self.time = np.linspace(0, 1, 1000) 
@@ -107,12 +107,12 @@ class SignalMixer(QtWidgets.QWidget):
         self.update_noise.emit()
 
     def add_signal(self):
-        
         self.signals.append([])
         self.update_signal_list()
         self.emit_update_signal()
 
     def add_component(self, imported_signal=None):
+        #if there's no signal it appends a new signal and put components into it 
         if not self.signals:
             self.add_signal()
 
@@ -131,6 +131,7 @@ class SignalMixer(QtWidgets.QWidget):
             if parent:
                 index = parent.indexOfChild(selected_item)
                 parent.takeChild(index)
+                #add a component to signals list by getting its parent index
                 signal_index = self.signal_list.indexOfTopLevelItem(parent)
                 if signal_index >= 0 and signal_index < len(self.signals):
                     self.signals[signal_index].append(signal)
@@ -140,6 +141,7 @@ class SignalMixer(QtWidgets.QWidget):
                     self.signals[index].append(signal)
 
         else:
+            #if no item is selected, it appends comonents to last signal of tree
             self.signals[-1].append(signal)
         self.update_signal_list()
         self.emit_update_signal()
@@ -152,7 +154,7 @@ class SignalMixer(QtWidgets.QWidget):
             if parent:
                 index = parent.indexOfChild(selected_item)
                 parent.takeChild(index)
-                #remove a component from signals list
+                #remove a component from signals list by getting its parent index
                 signal_index = self.signal_list.indexOfTopLevelItem(parent)
                 if signal_index >= 0 and signal_index < len(self.signals):
                     del self.signals[signal_index][index]
@@ -168,7 +170,9 @@ class SignalMixer(QtWidgets.QWidget):
 
     def update_signal_list(self):
         self.signal_list.clear()
+        #loop throgh signals getting each index and its signal from enum
         for i, signal in enumerate(self.signals):
+            #create tree widget for each signal 
             signal_item = QTreeWidgetItem([f"Signal {i+1}"])
 
             for component in signal:
@@ -185,8 +189,9 @@ class SignalMixer(QtWidgets.QWidget):
         self.update_signal.emit()  
 
     def compose_signal(self, time):
-        """Compose the mixed signal based on the current signals."""
+        # mixed signal from current signals
         mixed_signal = np.zeros_like(time)
+        f_max = 2
         selected_item = self.signal_list.currentItem()
         if selected_item:
             parent = selected_item.parent()
@@ -209,9 +214,10 @@ class SignalMixer(QtWidgets.QWidget):
             for component in signal:
                 if isinstance(component, tuple) and len(component) == 3:
                     frequency, amplitude, phase = component
-                    mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+                    phase_rad = np.deg2rad(phase)
+                    mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase_rad)
+                    f_max = frequency if frequency > f_max else f_max
                 elif isinstance(component, Signal):
-                    # mixed_signal += component.data 
                     if len(component.data) != len(mixed_signal):
                         component_data_resized = np.interp(
                             np.linspace(0, 1, len(mixed_signal)),
@@ -221,18 +227,22 @@ class SignalMixer(QtWidgets.QWidget):
                         mixed_signal += component_data_resized
                     else:
                         mixed_signal += component.data
+                    f_max = int(component.f_sample) if int(component.f_sample) > f_max else f_max
 
                 else:
                     raise ValueError("Unsupported component format: {}".format(component))
         elif isinstance(signal, tuple) and len(signal) == 3:
             frequency, amplitude, phase = signal
-            mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
+            phase_rad = np.deg2rad(phase)
+            mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase_rad)
+            f_max = frequency if frequency > f_max else f_max
         elif isinstance(signal, Signal):
             mixed_signal += signal.data 
+            f_max = int(component.f_sample) if int(component.f_sample) > f_max else f_max
         else:
             raise ValueError("Unsupported signal format: {}".format(signal))
 
-        return mixed_signal
+        return mixed_signal, f_max
         
     def import_signal_file(self):
         file_name, _ = QFileDialog.getOpenFileName()

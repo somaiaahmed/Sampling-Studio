@@ -127,19 +127,19 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.original_plot.clear()  
             self.f_max = 2  
         else:
-            self.signal = self.mixer.compose_signal(self.time)
-            max_frequency = []
+            self.signal, f_max = self.mixer.compose_signal(self.time)
+            # max_frequency = []
 
-            for signal in self.mixer.signals:
-                if isinstance(signal, list):  #make sure that signal is list of components
-                    for component in signal:
-                        if isinstance(component, tuple) and len(component) == 3:
-                            max_frequency.append(component[0])
-                        if isinstance(component, Signal):
-                            max_frequency.append(int(component.f_sample))
+            # for signal in self.mixer.signals:
+            #     if isinstance(signal, list):  #make sure that signal is list of components
+            #         for component in signal:
+            #             if isinstance(component, tuple) and len(component) == 3:
+            #                 max_frequency.append(component[0])
+            #             if isinstance(component, Signal):
+            #                 max_frequency.append(int(component.f_sample))
 
 
-            self.f_max = max(max_frequency) if max_frequency else 2  #in case of no max freq found, default = 2
+            self.f_max = f_max
 
         self.update_sampling_slider() 
         self.sample_and_reconstruct()
@@ -162,14 +162,14 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.sample_and_reconstruct()
 
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
-        # defining interpolation methods
         # Whittaker-Shannon (Sinc) Interpolation
+
+        """
+        x: sample positions (sampling_t)
+        s: sample values (sampled_signal)
+        t: target positions (continuous time for reconstruction)
+        """
         def sinc_interp(x, s, t):
-            """
-            x: sample positions (sampling_t)
-            s: sample values (sampled_signal)
-            t: target positions (continuous time for reconstruction)
-            """
             T = x[1] - x[0]
             return np.array([np.sum(s * np.sinc((t_i - x) / T)) for t_i in t])
 
