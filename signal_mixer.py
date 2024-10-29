@@ -211,16 +211,8 @@ class SignalMixer(QtWidgets.QWidget):
                     frequency, amplitude, phase = component
                     mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
                 elif isinstance(component, Signal):
-                    # mixed_signal += component.data 
-                    if len(component.data) != len(mixed_signal):
-                        component_data_resized = np.interp(
-                            np.linspace(0, 1, len(mixed_signal)),
-                            np.linspace(0, 1, len(component.data)),
-                            component.data
-                        )
-                        mixed_signal += component_data_resized
-                    else:
-                        mixed_signal += component.data
+                    mixed_signal += component.data 
+                    
 
                 else:
                     raise ValueError("Unsupported component format: {}".format(component))
