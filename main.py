@@ -51,6 +51,9 @@ class SignalSamplingApp(QtWidgets.QWidget):
         style_plot_widget(self.error_plot)
         style_plot_widget(self.frequency_plot)
 
+       
+        
+
         #creating grid layout for plots
         plot_grid = QtWidgets.QGridLayout()
         plot_grid.addWidget(self.original_plot, 0, 0)
@@ -60,7 +63,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         #horizontal layout for plots & mixer
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addLayout(plot_grid)
+        h_layout.addLayout(plot_grid, 65)
         h_layout.addWidget(self.mixer)
         layout.addLayout(h_layout)
 
