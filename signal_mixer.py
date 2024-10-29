@@ -10,15 +10,15 @@ from signal_construct import Signal
 
 
 class SignalMixer(QtWidgets.QWidget):
-    update_signal = QtCore.pyqtSignal()  # Define a signal to emit when updating
+    update_signal = QtCore.pyqtSignal()  
     update_noise = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
-        self.signals = []  # List to hold tuples of (frequency, amplitude)
+        self.signals = []  # list of tuples: (frequency, amplitude)
         self.initUI()
-        self.max_length = 0  # Initialize max_length to 0
-        self.time = np.linspace(0, 1, 1000)  # Time array for plotting (adjust as needed)
-        self.mixed_signal = np.zeros_like(self.time)  # Initialize mixed signal
+        self.max_length = 0  
+        self.time = np.linspace(0, 1, 1000) 
+        self.mixed_signal = np.zeros_like(self.time)  
 
     def initUI(self):
         self.setWindowTitle("Signal Mixer")
@@ -97,11 +97,8 @@ class SignalMixer(QtWidgets.QWidget):
 
         control_container.setObjectName("control_container")
 
-        # Add the control_container to the main layout
         layout.addWidget(control_container)
         
-
-
         with open("style/mixer.qss", "r") as f:
             self.setStyleSheet(f.read())
 
@@ -155,12 +152,12 @@ class SignalMixer(QtWidgets.QWidget):
             if parent:
                 index = parent.indexOfChild(selected_item)
                 parent.takeChild(index)
-                # Remove component from signals list
+                #remove a component from signals list
                 signal_index = self.signal_list.indexOfTopLevelItem(parent)
                 if signal_index >= 0 and signal_index < len(self.signals):
                     del self.signals[signal_index][index]
             else:
-                # Top level item (signal)
+                #top level item (signal) --> default
                 index = self.signal_list.indexOfTopLevelItem(selected_item)
                 if index >= 0 and index < len(self.signals):
                     self.signals.pop(index)
@@ -180,14 +177,12 @@ class SignalMixer(QtWidgets.QWidget):
                     component_text = f"Frequency: {frequency} Hz, Amplitude: {amplitude}, Phase: {phase}"
                     signal_item.addChild(QTreeWidgetItem([component_text]))
                 elif isinstance(component, Signal):
-                    # signal_item = QTreeWidgetItem([f"{component.title}"])
-                    # Add the signal item as a top-level item in the tree
+                    #put signal item at top level of tree
                     signal_item.addChild(QTreeWidgetItem([f"{component.title}"]))
             self.signal_list.addTopLevelItem(signal_item)
 
-
     def emit_update_signal(self):
-        self.update_signal.emit()  # Emit the signal to notify the main app
+        self.update_signal.emit()  
 
     def compose_signal(self, time):
         """Compose the mixed signal based on the current signals."""
@@ -210,7 +205,7 @@ class SignalMixer(QtWidgets.QWidget):
         elif self.signals:
             signal = self.signals[-1]
 
-        if isinstance(signal, list):  # Check if the signal is a list of components
+        if isinstance(signal, list): 
             for component in signal:
                 if isinstance(component, tuple) and len(component) == 3:
                     frequency, amplitude, phase = component
@@ -236,7 +231,7 @@ class SignalMixer(QtWidgets.QWidget):
             extension = os.path.splitext(file_name)[1].lower()
             if extension == '.csv':
                 with open(file_name, mode='r') as file:
-                    # Read the sampling rate from the first line
+                    #read sampling rate from 1st line
                     sampling_rate = float(file.readline().strip())
                     signal_data = np.genfromtxt(file, delimiter=',')
             elif extension == '.txt':
@@ -257,24 +252,20 @@ class SignalMixer(QtWidgets.QWidget):
                 f_sample=sampling_rate
             )
 
-            # Append the newly created Signal instance to the signals list
+            #append new Signal instance to signals list
             self.add_component(imported_signal=new_signal)
             self.max_length = max(self.max_length, len(signal_data))
-            
-            # Update the original graph with the newly imported signal
-            self.emit_update_signal()  # Emit signal to update the graph
+            self.emit_update_signal() 
             
         else:
             self.show_error_message("Unsupported signal dimension: " + str(signal_data.ndim))
 
         
     def show_error_message(self, message):
-        # Display an error message to the user
         QMessageBox.critical(self, "Error", message)
 
     @staticmethod
     def generate_random_light_color():
-        # Generate RGB values that are in a range that avoids dark colors
         r = random.randint(128, 255)
         g = random.randint(128, 255)
         b = random.randint(128, 255)

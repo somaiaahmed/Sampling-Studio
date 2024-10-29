@@ -39,7 +39,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        # Create plots
+        #creating our plots
         self.original_plot = pg.PlotWidget(title="Original Signal")
         self.reconstructed_plot = pg.PlotWidget(title="Reconstructed Signal")
         self.error_plot = pg.PlotWidget(
@@ -51,20 +51,17 @@ class SignalSamplingApp(QtWidgets.QWidget):
         style_plot_widget(self.error_plot)
         style_plot_widget(self.frequency_plot)
 
-        # Create grid layout for plots
+        #creating grid layout for plots
         plot_grid = QtWidgets.QGridLayout()
         plot_grid.addWidget(self.original_plot, 0, 0)
         plot_grid.addWidget(self.reconstructed_plot, 0, 1)
         plot_grid.addWidget(self.error_plot, 1, 0)
         plot_grid.addWidget(self.frequency_plot, 1, 1)
 
-        # Create horizontal layout for plots and mixer
+        #horizontal layout for plots & mixer
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addLayout(plot_grid)
-
         h_layout.addWidget(self.mixer)
-
-        # Add the horizontal layout to the main layout
         layout.addLayout(h_layout)
 
         #slider for sampling:
@@ -82,67 +79,59 @@ class SignalSamplingApp(QtWidgets.QWidget):
         control_panel.addWidget(self.sampling_label)
         layout.addLayout(control_panel)
         
-        # Add combobox for normalized frequency selection 
+        #combobox for normalized freq. selection 
         normalized_layout = QtWidgets.QHBoxLayout()
         self.normalized_label = QtWidgets.QLabel("Normalized Frequency: ")
         normalized_layout.addWidget(self.normalized_label)
-
         control_panel.addLayout(normalized_layout)
         layout.addLayout(control_panel)
-        
         self.freq_comboBox = QComboBox()
-        # Add options from 0*f_max to 4*f_max
+
+
+        #options from 0*f_max to 4*f_max
         for i in range(5):
             self.freq_comboBox.addItem(f"{i} * f_max", i)
-        self.freq_comboBox.setCurrentIndex(1)  # Default to 1 * f_max
+        self.freq_comboBox.setCurrentIndex(1) 
         self.freq_comboBox.currentIndexChanged.connect(self.update_sampling_from_combobox)
         control_panel.addWidget(self.freq_comboBox)
     
-        # Add reconstruction method combobox
+
+        #reconstruction method combobox
         reconstruction_layout = QtWidgets.QHBoxLayout()
         self.reconstruction_method_label = QtWidgets.QLabel("Reconstruction Method: ")
         reconstruction_layout.addWidget(self.reconstruction_method_label)
-
         self.reconstruction_method_comboBox = QtWidgets.QComboBox(self)
         self.reconstruction_method_comboBox.addItems(
             ["Whittaker-Shanon (sinc)", "Zero-Order Hold", "Linear", "Cubic Spline", "Lagrange"])
         self.reconstruction_method_comboBox.currentTextChanged.connect(
             self.update_reconstruction_method)
-
         reconstruction_layout.addWidget(self.reconstruction_method_comboBox)
-
-        # Add the horizontal layout to the control panel
         control_panel.addLayout(reconstruction_layout)
-
         layout.addLayout(control_panel)
 
-    def update_sampling_from_combobox(self):
-        """Update sampling rate based on normalized frequency selected in the combobox."""
-        multiplier = self.freq_comboBox.currentData()  # Get the multiplier from the combobox
-        self.sampling_rate = max(2, int(multiplier * self.f_max))  # Calculate new sampling rate
-        self.sampling_slider.setValue(self.sampling_rate)  # Update slider position
+    def update_sampling_from_combobox(self): #based on selected normalized freq.
+        multiplier = self.freq_comboBox.currentData() 
+        self.sampling_rate = max(2, int(multiplier * self.f_max))  
+        self.sampling_slider.setValue(self.sampling_rate) 
         self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")
-        self.sample_and_reconstruct()  # Re-sample and reconstruct the signal
+        self.sample_and_reconstruct()  
         
     
     def open_mixer(self):
         self.mixer.show()
 
+
     def update_original_signal(self):
-        """Update the original signal based on the mixer contents."""
-        if not self.mixer.signals:  # Check if there are no signals in the mixer
-            self.signal = np.zeros_like(self.time)  # Set the signal to zero if no signals are present
-            self.original_plot.clear()  # Clear the original plot
-            self.f_max = 2  # Set a default frequency
+        if not self.mixer.signals: 
+            self.signal = np.zeros_like(self.time)  #default is zero if no signals are present
+            self.original_plot.clear()  
+            self.f_max = 2  
         else:
-            # Compose the mixed signal from the mixer
             self.signal = self.mixer.compose_signal(self.time)
-            
-            # Find the maximum frequency from all components for updating the sampling slider
             max_frequency = []
 
             for signal in self.mixer.signals:
-                if isinstance(signal, list):  # Ensure the signal is a list of components
+                if isinstance(signal, list):  #make sure that signal is list of components
                     for component in signal:
                         if isinstance(component, tuple) and len(component) == 3:
                             max_frequency.append(component[0])
@@ -150,26 +139,25 @@ class SignalSamplingApp(QtWidgets.QWidget):
                             max_frequency.append(int(component.f_sample))
 
 
-            self.f_max = max(max_frequency) if max_frequency else 2  # Use the max frequency if found, else default to 2
+            self.f_max = max(max_frequency) if max_frequency else 2  #in case of no max freq found, default = 2
 
-        self.update_sampling_slider()  # Update the sampling slider based on the new maximum frequency
-        self.sample_and_reconstruct()  # Re-sample and reconstruct the signal
+        self.update_sampling_slider() 
+        self.sample_and_reconstruct()
 
 
 
     def update_sampling_slider(self):
-        """Reconfigure the sampling slider based on the current f_max."""
-        self.sampling_slider.setMaximum(4 * self.f_max)  # Set the slider maximum to 4 times f_max
-        self.sampling_slider.setTickInterval(int(self.f_max))  # Update tick interval to f_max
-        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  # Adjust the current value to be within the new range
-        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  # Update the label
+        self.sampling_slider.setMaximum(4 * self.f_max)  #max = 4*f_max
+        self.sampling_slider.setTickInterval(int(self.f_max))  #update tick interval to f_max
+        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  #adjust current value to be within the new range
+        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  
 
     def update_sampling(self):
         self.sampling_rate = self.sampling_slider.value()
         if self.sampling_rate < 2:
             self.sampling_rate = 2
 
-        self.sampling_slider.setValue(self.sampling_rate)  # Reset the slider to 2
+        self.sampling_slider.setValue(self.sampling_rate) #resetting slider to (2)
         self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")  
         self.sample_and_reconstruct()
 
@@ -311,7 +299,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         print('Sampling rate:', self.sampling_rate)   
 
     def export_signal(self):
-        # Open a file dialog to save the CSV file
+        #file dialog to save CSV file
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getSaveFileName(self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
         
