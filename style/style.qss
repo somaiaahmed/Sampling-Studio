@@ -92,3 +92,7 @@ QComboBox:hover {
 #samplingSlider{
     max-width: 500px;
 }
+
+#controlPanel{
+    justify-content: space-between;
+}

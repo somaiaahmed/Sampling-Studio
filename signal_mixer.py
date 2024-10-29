@@ -211,7 +211,17 @@ class SignalMixer(QtWidgets.QWidget):
                     frequency, amplitude, phase = component
                     mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase * np.pi / 360)
                 elif isinstance(component, Signal):
-                    mixed_signal += component.data 
+                    # mixed_signal += component.data 
+                    if len(component.data) != len(mixed_signal):
+                        component_data_resized = np.interp(
+                            np.linspace(0, 1, len(mixed_signal)),
+                            np.linspace(0, 1, len(component.data)),
+                            component.data
+                        )
+                        mixed_signal += component_data_resized
+                    else:
+                        mixed_signal += component.data
+
                 else:
                     raise ValueError("Unsupported component format: {}".format(component))
         elif isinstance(signal, tuple) and len(signal) == 3:
@@ -252,7 +262,6 @@ class SignalMixer(QtWidgets.QWidget):
                 f_sample=sampling_rate
             )
 
-            #append new Signal instance to signals list
             self.add_component(imported_signal=new_signal)
             self.max_length = max(self.max_length, len(signal_data))
             self.emit_update_signal() 
@@ -270,5 +279,3 @@ class SignalMixer(QtWidgets.QWidget):
         g = random.randint(128, 255)
         b = random.randint(128, 255)
         return (r, g, b)
-
-
