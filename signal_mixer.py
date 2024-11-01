@@ -238,7 +238,7 @@ class SignalMixer(QtWidgets.QWidget):
             f_max = frequency if frequency > f_max else f_max
         elif isinstance(signal, Signal):
             mixed_signal += signal.data 
-            f_max = int(component.f_sample) if int(component.f_sample) > f_max else f_max
+            f_max = int(signal.f_sample) if int(signal.f_sample) > f_max else f_max
         else:
             raise ValueError("Unsupported signal format: {}".format(signal))
 

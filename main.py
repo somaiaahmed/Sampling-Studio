@@ -131,17 +131,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.f_max = 2  
         else:
             self.signal, f_max = self.mixer.compose_signal(self.time)
-            # max_frequency = []
-
-            # for signal in self.mixer.signals:
-            #     if isinstance(signal, list):  #make sure that signal is list of components
-            #         for component in signal:
-            #             if isinstance(component, tuple) and len(component) == 3:
-            #                 max_frequency.append(component[0])
-            #             if isinstance(component, Signal):
-            #                 max_frequency.append(int(component.f_sample))
-
-
             self.f_max = f_max
 
         self.update_sampling_slider() 
@@ -257,7 +246,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
             fft_original[1:] *= 2  
             fft_original /= len(self.time)  
-            # self.sampling_slider.setMaximum(4 * self.f_max)
             self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
         else:
             self.error_plot.setTitle(f"Error Graph")
