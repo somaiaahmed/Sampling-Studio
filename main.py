@@ -207,7 +207,9 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         noised_signal = self.noise_signal + self.signal if len(self.noise_signal) == len(self.signal) else self.signal
 
-        sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)
+        sample_points = np.linspace(0, len(self.time) - 1, (self.sampling_rate + 2) * self.max_time_axis).astype(int)
+        sample_points = sample_points[1:-1]
+        # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)        
         sampled_time = self.time[sample_points]
         sampled_signal = noised_signal[sample_points]
 
