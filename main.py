@@ -33,7 +33,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
 
     def initUI(self):
-        self.setWindowTitle("Signal Sampling and Recovery")
+        self.setWindowTitle("Signal Equalizer")
         self.setGeometry(100, 100, 1200, 800)
 
         layout = QtWidgets.QVBoxLayout()
@@ -71,6 +71,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         control_panel = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.sampling_slider.setMinimum(2)
+
         self.sampling_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
         self.sampling_slider.setTickInterval(1)  
         self.sampling_slider.setValue(self.sampling_rate)
@@ -139,7 +140,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
 
     def update_sampling_slider(self):
-        self.sampling_slider.setMaximum(4 * self.f_max)  #max = 4*f_max
+        # self.sampling_slider.setMaximum(4 * self.f_max)  #max = 4*f_max4
+        self.sampling_slider.setMaximum(1000)
         self.sampling_slider.setTickInterval(int(self.f_max))  #update tick interval to f_max
         self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  #adjust current value to be within the new range
         self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  
@@ -249,51 +251,48 @@ class SignalSamplingApp(QtWidgets.QWidget):
             fft_original[1:] *= 2  
             fft_original /= len(self.time)  
             # self.sampling_slider.setMaximum(4 * self.f_max)
-            self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen=pg.mkPen('g', width=5))
+            self.frequency_plot.plot(freqs, fft_original, pen=pg.mkPen('g', width=5))
+            self.frequency_plot.setXRange(-100,100)
+            self.frequency_plot.setYRange(0,1)
         else:
             self.error_plot.setTitle(f"Error Graph")
 
+        
+
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
+        print("freqs", freqs)
+        
         fft_original = np.abs(fft(noised_signal))
 
         fft_original[1:] *= 2
         fft_original /= len(self.time)
 
-        self.frequency_plot.plot(freqs[:len(freqs)//2], fft_original[:len(freqs)//2], pen='#007AFF')
+        self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
+        self.frequency_plot.setXRange(-100,100)
+        self.frequency_plot.setYRange(0,1)
 
         signal_index, component_index = self.mixer.get_selected_signal_index()
-        if signal_index is not None:
-            print(len(self.mixer.signals[signal_index]))
-            if len(self.mixer.signals[signal_index]) < 2:
-                if self.sampling_rate == 2 * self.f_max:
-                    overlap_factor = 2.1
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                elif self.sampling_rate < 2 * self.f_max:
-                    overlap_factor = self.sampling_rate*(1/self.f_max)
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                else:
-                    spacing_factor = self.sampling_rate * (1/self.f_max)
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
+        # if signal_index is not None:
+        #     print(len(self.mixer.signals[signal_index]))
+        if len(self.mixer.signals[signal_index]) < 2:
+            if self.sampling_rate == 2 * self.f_max:
+                overlap_factor = 2.1
+                self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+                self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+            elif self.sampling_rate < 2 * self.f_max:
+                overlap_factor = self.sampling_rate*(1/self.f_max)
+                self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+                self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
             else:
-                min_freq, max_freq = self.mixer.get_frequency_bounds()
-                if self.sampling_rate == 2 * self.f_max:
-                    overlap_factor = 2.1
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                elif self.sampling_rate < 2 * self.f_max:
-                    overlap_factor = self.sampling_rate*(1/self.f_max)
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                else:
-                    spacing_factor = self.sampling_rate * (1/self.f_max)
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] - spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
-                    self.frequency_plot.plot(freqs[:len(freqs)//2] + spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=5))
+                spacing_factor = self.sampling_rate * (1/self.f_max)
+                self.frequency_plot.plot(freqs[:len(freqs)//2] - spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+                self.frequency_plot.plot(freqs[:len(freqs)//2] + spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+            
 
         self.set_same_viewing_range()
+        self.frequency_plot.setXRange(-100,100)
+        self.frequency_plot.setYRange(0,1)
 
     def add_noise(self):
         snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)
