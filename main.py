@@ -272,22 +272,22 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.frequency_plot.setXRange(-100,100)
         self.frequency_plot.setYRange(0,1)
 
-        signal_index, component_index = self.mixer.get_selected_signal_index()
+        # signal_index, component_index = self.mixer.get_selected_signal_index()
         # if signal_index is not None:
         #     print(len(self.mixer.signals[signal_index]))
-        if len(self.mixer.signals[signal_index]) < 2:
-            if self.sampling_rate == 2 * self.f_max:
-                overlap_factor = 2.1
-                self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
-                self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
-            elif self.sampling_rate < 2 * self.f_max:
-                overlap_factor = self.sampling_rate*(1/self.f_max)
-                self.frequency_plot.plot(freqs[:len(freqs)//2] - overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
-                self.frequency_plot.plot(freqs[:len(freqs)//2] + overlap_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
-            else:
-                spacing_factor = self.sampling_rate * (1/self.f_max)
-                self.frequency_plot.plot(freqs[:len(freqs)//2] - spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
-                self.frequency_plot.plot(freqs[:len(freqs)//2] + spacing_factor, fft_original[:len(freqs)//2], pen=pg.mkPen('r', width=2))
+        # if len(self.mixer.signals[signal_index]) < 2:
+        if self.sampling_rate == 2 * self.f_max:
+            overlap_factor = 2.1
+            self.frequency_plot.plot(freqs+ overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(freqs- overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+        elif self.sampling_rate < 2 * self.f_max:
+            overlap_factor = self.sampling_rate*(1/self.f_max)
+            self.frequency_plot.plot(freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+        else:
+            spacing_factor = self.sampling_rate * (1/self.f_max)
+            self.frequency_plot.plot(freqs- spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
             
 
         self.set_same_viewing_range()
