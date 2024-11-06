@@ -262,13 +262,13 @@ class SignalSamplingApp(QtWidgets.QWidget):
             half_len = len(freqs) // 2
             fft_original[half_len:] = 0
 
-            shift_value = (self.f_max / 10)
-            shifted_freqs = freqs - shift_value
+            # shift_value = (self.f_max / 10)
+            # shifted_freqs = freqs - shift_value
 
             self.sampling_slider.setMaximum(4 * self.f_max)
             self.frequency_plot.plot(
-                shifted_freqs, fft_original, pen=pg.mkPen('g', width=5))
-            self.frequency_plot.setXRange(-100, 100)
+                freqs, fft_original, pen=pg.mkPen('g', width=5))
+            self.frequency_plot.setXRange(-50, 50)
             self.frequency_plot.setYRange(0, 1)
         else:
             self.error_plot.setTitle(f"Error Graph")
@@ -289,10 +289,10 @@ class SignalSamplingApp(QtWidgets.QWidget):
         half_len = len(freqs) // 2
         fft_original[half_len:] = 0
 
-        shifted_freqs = freqs - (self.f_max / 10)
+        # shifted_freqs = freqs - (self.f_max / 10)
 
-        self.frequency_plot.plot(shifted_freqs, fft_original, pen='#007AFF')
-        self.frequency_plot.setXRange(-100, 100)
+        self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
+        self.frequency_plot.setXRange(-50, 50)
         self.frequency_plot.setYRange(0, 1)
 
         # signal_index, component_index = self.mixer.get_selected_signal_index()
@@ -300,23 +300,23 @@ class SignalSamplingApp(QtWidgets.QWidget):
         #     print(len(self.mixer.signals[signal_index]))
         # if len(self.mixer.signals[signal_index]) < 2:
         if self.sampling_rate == 2 * self.f_max:
-            overlap_factor = 2.1
+            overlap_factor = self.sampling_rate*(1/(2*self.f_max))
             self.frequency_plot.plot(
-                shifted_freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
             self.frequency_plot.plot(
-                shifted_freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
         elif self.sampling_rate < 2 * self.f_max:
-            overlap_factor = self.sampling_rate*(1/self.f_max)
+            overlap_factor = self.sampling_rate*(1/(2*self.f_max))
             self.frequency_plot.plot(
-                shifted_freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
             self.frequency_plot.plot(
-                shifted_freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
         else:
-            spacing_factor = self.sampling_rate * (1/self.f_max)
+            spacing_factor = self.sampling_rate * (1/(2*self.f_max))
             self.frequency_plot.plot(
-                shifted_freqs - spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs - spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
             self.frequency_plot.plot(
-                shifted_freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
+                freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
 
         # self.frequency_plot.plot(
         # freqs + self.sampling_rate, fft_original, pen=pg.mkPen('r', width=2), name="After Sampling Frequency")
@@ -326,7 +326,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
 
         self.set_same_viewing_range()
-        self.frequency_plot.setXRange(-100, 100)
+        self.frequency_plot.setXRange(-50, 50)
         self.frequency_plot.setYRange(0, 1)
 
     def add_noise(self):
