@@ -22,15 +22,13 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.initUI()
 
         self.max_time_axis = 1
-        self.time = np.linspace(0, self.max_time_axis, 1000)
+        self.time = np.linspace(0, self.max_time_axis, 10000)
         self.signal = np.zeros_like(self.time)
         self.noise_signal = np.zeros_like(self.time)
-        
-        self.mixer.update_signal.connect(self.update_original_signal)  
+
+        self.mixer.update_signal.connect(self.update_original_signal)
         self.mixer.update_noise.connect(self.sample_and_reconstruct)
         self.mixer.export_button.clicked.connect(self.export_signal)
-
-
 
     def initUI(self):
         self.setWindowTitle("Signal Equalizer")
@@ -39,51 +37,49 @@ class SignalSamplingApp(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        #creating our plots
+        # creating our plots
         self.original_plot = pg.PlotWidget(title="Original Signal")
         self.reconstructed_plot = pg.PlotWidget(title="Reconstructed Signal")
         self.error_plot = pg.PlotWidget(
             title="Error (Original - Reconstructed)")
         self.frequency_plot = pg.PlotWidget(title="Frequency Domain")
-        
+
         style_plot_widget(self.original_plot)
         style_plot_widget(self.reconstructed_plot)
         style_plot_widget(self.error_plot)
         style_plot_widget(self.frequency_plot)
 
-       
-        
-
-        #creating grid layout for plots
+        # creating grid layout for plots
         plot_grid = QtWidgets.QGridLayout()
         plot_grid.addWidget(self.original_plot, 0, 0)
         plot_grid.addWidget(self.reconstructed_plot, 1, 0)
         plot_grid.addWidget(self.error_plot, 2, 0)
         plot_grid.addWidget(self.frequency_plot, 3, 0)
 
-        #horizontal layout for plots & mixer
+        # horizontal layout for plots & mixer
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addLayout(plot_grid, 65)
         h_layout.addWidget(self.mixer)
         layout.addLayout(h_layout)
 
-        #slider for sampling:
+        # slider for sampling:
         control_panel = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.sampling_slider.setMinimum(2)
 
         self.sampling_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        self.sampling_slider.setTickInterval(1)  
+        self.sampling_slider.setTickInterval(1)
         self.sampling_slider.setValue(self.sampling_rate)
         self.sampling_slider.valueChanged.connect(self.update_sampling)
         self.sampling_slider.setObjectName("samplingSlider")
 
-        self.sampling_label = QtWidgets.QLabel(f"Sampling Frequency: {self.sampling_rate}")  
+        self.sampling_label = QtWidgets.QLabel(
+            f"Sampling Frequency: {self.sampling_rate}")
         control_panel.addWidget(self.sampling_slider)
         control_panel.addWidget(self.sampling_label)
         layout.addLayout(control_panel)
-        
-        #combobox for normalized freq. selection 
+
+        # combobox for normalized freq. selection
         normalized_layout = QtWidgets.QHBoxLayout()
         self.normalized_label = QtWidgets.QLabel("Normalized Frequency: ")
         normalized_layout.addWidget(self.normalized_label)
@@ -91,18 +87,18 @@ class SignalSamplingApp(QtWidgets.QWidget):
         layout.addLayout(control_panel)
         self.freq_comboBox = QComboBox()
 
-
-        #options from 0*f_max to 4*f_max
+        # options from 0*f_max to 4*f_max
         for i in range(5):
             self.freq_comboBox.addItem(f"{i} * f_max", i)
-        self.freq_comboBox.setCurrentIndex(1) 
-        self.freq_comboBox.currentIndexChanged.connect(self.update_sampling_from_combobox)
+        self.freq_comboBox.setCurrentIndex(1)
+        self.freq_comboBox.currentIndexChanged.connect(
+            self.update_sampling_from_combobox)
         control_panel.addWidget(self.freq_comboBox)
-    
 
-        #reconstruction method combobox
+        # reconstruction method combobox
         reconstruction_layout = QtWidgets.QHBoxLayout()
-        self.reconstruction_method_label = QtWidgets.QLabel("Reconstruction Method: ")
+        self.reconstruction_method_label = QtWidgets.QLabel(
+            "Reconstruction Method: ")
         reconstruction_layout.addWidget(self.reconstruction_method_label)
         self.reconstruction_method_comboBox = QtWidgets.QComboBox(self)
         self.reconstruction_method_comboBox.addItems(
@@ -113,51 +109,54 @@ class SignalSamplingApp(QtWidgets.QWidget):
         control_panel.addLayout(reconstruction_layout)
         layout.addLayout(control_panel)
 
-    def update_sampling_from_combobox(self): #based on selected normalized freq.
-        multiplier = self.freq_comboBox.currentData() 
-        self.sampling_rate = max(2, int(multiplier * self.f_max))  
-        self.sampling_slider.setValue(self.sampling_rate) 
-        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")
-        self.sample_and_reconstruct()  
-        
-    
+    # based on selected normalized freq.
+    def update_sampling_from_combobox(self):
+        multiplier = self.freq_comboBox.currentData()
+        self.sampling_rate = max(2, int(multiplier * self.f_max))
+        self.sampling_slider.setValue(self.sampling_rate)
+        self.sampling_label.setText(
+            f"Sampling Frequency: {self.sampling_rate}")
+        self.sample_and_reconstruct()
+
     def open_mixer(self):
         self.mixer.show()
 
-
     def update_original_signal(self):
-        if not self.mixer.signals: 
-            self.signal = np.zeros_like(self.time)  #default is zero if no signals are present
-            self.original_plot.clear()  
-            self.f_max = 2  
+        if not self.mixer.signals:
+            # default is zero if no signals are present
+            self.signal = np.zeros_like(self.time)
+            self.original_plot.clear()
+            self.f_max = 2
         else:
             self.signal, f_max = self.mixer.compose_signal(self.time)
             self.f_max = f_max
 
-        self.update_sampling_slider() 
+        self.update_sampling_slider()
         self.sample_and_reconstruct()
 
-
-
     def update_sampling_slider(self):
-        # self.sampling_slider.setMaximum(4 * self.f_max)  #max = 4*f_max4
-        self.sampling_slider.setMaximum(1000)
-        self.sampling_slider.setTickInterval(int(self.f_max))  #update tick interval to f_max
-        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))  #adjust current value to be within the new range
-        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_slider.value()}")  
+        self.sampling_slider.setMaximum(4 * self.f_max)  # max = 4*f_max4
+
+        self.sampling_slider.setTickInterval(
+            int(self.f_max))  # update tick interval to f_max
+        # adjust current value to be within the new range
+        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))
+        self.sampling_label.setText(
+            f"Sampling Frequency: {self.sampling_slider.value()}")
 
     def update_sampling(self):
         self.sampling_rate = self.sampling_slider.value()
         if self.sampling_rate < 2:
             self.sampling_rate = 2
 
-        self.sampling_slider.setValue(self.sampling_rate) #resetting slider to (2)
-        self.sampling_label.setText(f"Sampling Frequency: {self.sampling_rate}")  
+        self.sampling_slider.setValue(
+            self.sampling_rate)  # resetting slider to (2)
+        self.sampling_label.setText(
+            f"Sampling Frequency: {self.sampling_rate}")
         self.sample_and_reconstruct()
 
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
         # Whittaker-Shannon (Sinc) Interpolation
-
         """
         x: sample positions (sampling_t)
         s: sample values (sampled_signal)
@@ -207,15 +206,19 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if self.interp_method is None:
             self.update_reconstruction_method()
 
-        noised_signal = self.noise_signal + self.signal if len(self.noise_signal) == len(self.signal) else self.signal
+        noised_signal = self.noise_signal + \
+            self.signal if len(self.noise_signal) == len(
+                self.signal) else self.signal
 
-        sample_points = np.linspace(0, len(self.time) - 1, (self.sampling_rate + 2) * self.max_time_axis).astype(int)
+        sample_points = np.linspace(0, len(
+            self.time) - 1, (self.sampling_rate + 2) * self.max_time_axis).astype(int)
         sample_points = sample_points[1:-1]
-        # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)        
+        # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)
         sampled_time = self.time[sample_points]
         sampled_signal = noised_signal[sample_points]
 
-        reconstructed_signal = self.interp_method(sampled_time, sampled_signal, self.time)
+        reconstructed_signal = self.interp_method(
+            sampled_time, sampled_signal, self.time)
 
         self.update_plots(sampled_time, sampled_signal, reconstructed_signal)
 
@@ -225,7 +228,9 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot.clear()
         self.frequency_plot.clear()
 
-        noised_signal = self.noise_signal + self.signal if len(self.noise_signal) == len(self.signal) else self.signal
+        noised_signal = self.noise_signal + \
+            self.signal if len(self.noise_signal) == len(
+                self.signal) else self.signal
         self.original_plot.plot(self.time, noised_signal,
                                 pen='#007AFF', name="Original Signal")
         if sampled_time is not None and sampled_signal is not None:
@@ -233,11 +238,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
                 sampled_time, sampled_signal, pen=None, symbol='o', symbolBrush='r')
 
         if reconstructed_signal is not None:
-            self.reconstructed_plot.plot(self.time, reconstructed_signal, pen='#007AFF')
+            self.reconstructed_plot.plot(
+                self.time, reconstructed_signal, pen='#007AFF')
 
             error = noised_signal - reconstructed_signal
-            text = f' |error| : {round(np.sum(np.abs(error)), 2)}'
-            
+            text = f'avg error: {round(np.mean(np.abs(error)), 2)}'
+
             title = f"""
             <div style='text-align: center;'>
                 <span style='font-size: 10pt;'><b>Error Graph</b></span><br>
@@ -248,29 +254,28 @@ class SignalSamplingApp(QtWidgets.QWidget):
             freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
             fft_original = np.abs(fft(reconstructed_signal))
 
-            fft_original[1:] *= 2  
-            fft_original /= len(self.time)  
-            # self.sampling_slider.setMaximum(4 * self.f_max)
-            self.frequency_plot.plot(freqs, fft_original, pen=pg.mkPen('g', width=5))
-            self.frequency_plot.setXRange(-100,100)
-            self.frequency_plot.setYRange(0,1)
+            fft_original[1:] *= 2
+            fft_original /= len(self.time)
+            self.sampling_slider.setMaximum(4 * self.f_max)
+            self.frequency_plot.plot(
+                freqs, fft_original, pen=pg.mkPen('g', width=5))
+            self.frequency_plot.setXRange(-100, 100)
+            self.frequency_plot.setYRange(0, 1)
         else:
             self.error_plot.setTitle(f"Error Graph")
-
-        
 
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
         print("freqs", freqs)
-        
+
         fft_original = np.abs(fft(noised_signal))
 
         fft_original[1:] *= 2
         fft_original /= len(self.time)
 
         self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
-        self.frequency_plot.setXRange(-100,100)
-        self.frequency_plot.setYRange(0,1)
+        self.frequency_plot.setXRange(-100, 100)
+        self.frequency_plot.setYRange(0, 1)
 
         # signal_index, component_index = self.mixer.get_selected_signal_index()
         # if signal_index is not None:
@@ -278,27 +283,33 @@ class SignalSamplingApp(QtWidgets.QWidget):
         # if len(self.mixer.signals[signal_index]) < 2:
         if self.sampling_rate == 2 * self.f_max:
             overlap_factor = 2.1
-            self.frequency_plot.plot(freqs+ overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(freqs- overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(
+                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(
+                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
         elif self.sampling_rate < 2 * self.f_max:
             overlap_factor = self.sampling_rate*(1/self.f_max)
-            self.frequency_plot.plot(freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(
+                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(
+                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
         else:
             spacing_factor = self.sampling_rate * (1/self.f_max)
-            self.frequency_plot.plot(freqs- spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
-            
+            self.frequency_plot.plot(
+                freqs - spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
+            self.frequency_plot.plot(
+                freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
 
         self.set_same_viewing_range()
-        self.frequency_plot.setXRange(-100,100)
-        self.frequency_plot.setYRange(0,1)
+        self.frequency_plot.setXRange(-100, 100)
+        self.frequency_plot.setYRange(0, 1)
 
     def add_noise(self):
         snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)
         signal_power = np.mean(self.signal ** 2)
         noise_power = signal_power / snr_linear
-        self.noise_signal = np.random.normal(0, np.sqrt(noise_power), self.signal.shape)
+        self.noise_signal = np.random.normal(
+            0, np.sqrt(noise_power), self.signal.shape)
 
     def set_same_viewing_range(self):
         x_min, x_max = min(self.time), max(self.time)
@@ -317,22 +328,25 @@ class SignalSamplingApp(QtWidgets.QWidget):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Left and self.sampling_rate > 2:
             self.sampling_rate -= 1
-            self.sample_and_reconstruct() 
+            self.sample_and_reconstruct()
         elif event.key() == Qt.Key_Right and self.sampling_rate < len(self.signal):
             self.sampling_rate += 1
-            self.sample_and_reconstruct()     
-        print('Sampling rate:', self.sampling_rate)   
+            self.sample_and_reconstruct()
+        print('Sampling rate:', self.sampling_rate)
 
     def export_signal(self):
-        #file dialog to save CSV file
+        # file dialog to save CSV file
         options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getSaveFileName(self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
-        
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
+
         if file_name:
             try:
-                signal = np.insert(self.signal + self.noise_signal, 0, self.sampling_rate)
+                signal = np.insert(
+                    self.signal + self.noise_signal, 0, self.sampling_rate)
                 np.savetxt(file_name, signal, delimiter=",")
-                QMessageBox.information(self, "Success", "File saved successfully!")
+                QMessageBox.information(
+                    self, "Success", "File saved successfully!")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"An error occurred: {e}")
 
