@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QComboBox, QFileDialog, QMessageBox
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 from scipy.fft import fft, fftfreq
@@ -31,7 +32,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.mixer.export_button.clicked.connect(self.export_signal)
 
     def initUI(self):
-        self.setWindowTitle("Signal Equalizer")
+        self.setWindowTitle("Smapling Studio")
+        self.setWindowIcon(QIcon("style/icons/logo.png"))
         self.setGeometry(100, 100, 1200, 800)
 
         layout = QtWidgets.QVBoxLayout()
