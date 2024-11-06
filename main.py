@@ -32,7 +32,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.mixer.export_button.clicked.connect(self.export_signal)
 
     def initUI(self):
-        self.setWindowTitle("Smapling Studio")
+        self.setWindowTitle("Sampling Studio")
         self.setWindowIcon(QIcon("style/icons/logo.png"))
         self.setGeometry(100, 100, 1200, 800)
 
@@ -137,14 +137,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.sample_and_reconstruct()
 
     def update_sampling_slider(self):
-        self.sampling_slider.setMaximum(4 * self.f_max)  # max = 4*f_max4
-
-        self.sampling_slider.setTickInterval(
-            int(self.f_max))  # update tick interval to f_max
+        self.sampling_slider.setMaximum(4 * self.f_max)  # max = 4*f_max
+        #self.sampling_slider.setTickInterval(int(self.f_max))  # update tick interval to f_max
         # adjust current value to be within the new range
-        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))
-        self.sampling_label.setText(
-            f"Sampling Frequency: {self.sampling_slider.value()}")
+        #self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))
+        #self.sampling_label.setText(
+        #    f"Sampling Frequency: {self.sampling_slider.value()}")
 
     def update_sampling(self):
         self.sampling_rate = self.sampling_slider.value()
