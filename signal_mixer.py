@@ -244,51 +244,51 @@ class SignalMixer(QtWidgets.QWidget):
 
         return mixed_signal, f_max
     
-    def get_selected_signal_index(self):
-        selected_item = self.signal_list.currentItem()
-        if selected_item:
-            parent = selected_item.parent()
-            if parent:
-                index = parent.indexOfChild(selected_item)
-                signal_index = self.signal_list.indexOfTopLevelItem(parent)
-                return signal_index, index  # Returns the top-level signal index and the component index
-            else:
-                index = self.signal_list.indexOfTopLevelItem(selected_item)
-                return index, None  # Returns the signal index, no component index
-        return None, None  # No selection
+    # def get_selected_signal_index(self):
+    #     selected_item = self.signal_list.currentItem()
+    #     if selected_item:
+    #         parent = selected_item.parent()
+    #         if parent:
+    #             index = parent.indexOfChild(selected_item)
+    #             signal_index = self.signal_list.indexOfTopLevelItem(parent)
+    #             return signal_index, index  # Returns the top-level signal index and the component index
+    #         else:
+    #             index = self.signal_list.indexOfTopLevelItem(selected_item)
+    #             return index, None  # Returns the signal index, no component index
+    #     return None, None  # No selection
 
-    def get_frequency_bounds(self):
-        selected_item = self.signal_list.currentItem()
-        if selected_item:
-            parent = selected_item.parent()
-            frequencies = []
+    # def get_frequency_bounds(self):
+    #     selected_item = self.signal_list.currentItem()
+    #     if selected_item:
+    #         parent = selected_item.parent()
+    #         frequencies = []
 
-            if parent:
-                # Get the index of the selected component
-                signal_index = self.signal_list.indexOfTopLevelItem(parent)
-                if signal_index >= 0 and signal_index < len(self.signals):
-                    for component in self.signals[signal_index]:
-                        if isinstance(component, tuple) and len(component) == 3:
-                            frequency, amplitude, phase = component
-                            frequencies.append(frequency)
-                        elif isinstance(component, Signal):
-                            frequencies.append(component.f_sample)  # Using f_sample as a frequency
+    #         if parent:
+    #             # Get the index of the selected component
+    #             signal_index = self.signal_list.indexOfTopLevelItem(parent)
+    #             if signal_index >= 0 and signal_index < len(self.signals):
+    #                 for component in self.signals[signal_index]:
+    #                     if isinstance(component, tuple) and len(component) == 3:
+    #                         frequency, amplitude, phase = component
+    #                         frequencies.append(frequency)
+    #                     elif isinstance(component, Signal):
+    #                         frequencies.append(component.f_sample)  # Using f_sample as a frequency
 
-            else:
-                # If no component is selected, treat it as the top-level signal
-                signal_index = self.signal_list.indexOfTopLevelItem(selected_item)
-                if signal_index >= 0 and signal_index < len(self.signals):
-                    for component in self.signals[signal_index]:
-                        if isinstance(component, tuple) and len(component) == 3:
-                            frequency, amplitude, phase = component
-                            frequencies.append(frequency)
-                        elif isinstance(component, Signal):
-                            frequencies.append(component.f_sample)
+    #         else:
+    #             # If no component is selected, treat it as the top-level signal
+    #             signal_index = self.signal_list.indexOfTopLevelItem(selected_item)
+    #             if signal_index >= 0 and signal_index < len(self.signals):
+    #                 for component in self.signals[signal_index]:
+    #                     if isinstance(component, tuple) and len(component) == 3:
+    #                         frequency, amplitude, phase = component
+    #                         frequencies.append(frequency)
+    #                     elif isinstance(component, Signal):
+    #                         frequencies.append(component.f_sample)
 
-            if frequencies:
-                return min(frequencies), max(frequencies)  # Return min and max frequencies
+    #         if frequencies:
+    #             return min(frequencies), max(frequencies)  # Return min and max frequencies
 
-        return None, None  # No frequencies found
+    #     return None, None  # No frequencies found
     
 
     def import_signal_file(self):
