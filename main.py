@@ -211,7 +211,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
                 self.signal) else self.signal
 
         sample_points = np.linspace(0, len(
-            self.time) - 1, (self.sampling_rate + 2) * self.max_time_axis).astype(int)
+            self.time) - 1, (self.sampling_rate * self.max_time_axis + 2)).astype(int)
         sample_points = sample_points[1:-1]
         # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)
         sampled_time = self.time[sample_points]
@@ -241,7 +241,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.reconstructed_plot.plot(
                 self.time, reconstructed_signal, pen='#007AFF')
 
-            error = noised_signal - reconstructed_signal
+            error = self.signal - reconstructed_signal
             text = f'avg error: {round(np.mean(np.abs(error)), 2)}'
 
             title = f"""
