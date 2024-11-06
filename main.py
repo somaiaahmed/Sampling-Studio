@@ -22,7 +22,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.mixer = SignalMixer()
         self.initUI()
 
-        self.max_time_axis = 1
+        self.max_time_axis = 10
         self.time = np.linspace(0, self.max_time_axis, 10000)
         self.signal = np.zeros_like(self.time)
         self.noise_signal = np.zeros_like(self.time)
