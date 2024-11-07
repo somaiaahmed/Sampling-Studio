@@ -68,3 +68,35 @@ QComboBox:hover {
 QLabel {
     background-color: transparent;
 }
+
+QSlider {
+    background-color: transparent;
+    height: 20px;
+}
+
+QSlider::groove:horizontal {
+    background: lightgray;
+    height: 6px;
+    
+}
+
+QSlider::sub-page:horizontal {
+    background: #007AFF; /* Blue for the filled portion */
+    height: 6px;
+    
+}
+
+QSlider::add-page:horizontal {
+    background: lightgray; /* Gray for the unfilled portion */
+    height: 6px;
+    
+}
+
+QSlider::handle:horizontal {
+    background: white;
+    
+    width: 20px;
+    height: 20px;
+    margin: -2px 0; /* Centers the handle in the groove */
+    border-radius: 5px;
+}
