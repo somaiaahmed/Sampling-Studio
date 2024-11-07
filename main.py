@@ -24,7 +24,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.initUI()
 
         self.max_time_axis = 10
-        self.time = np.linspace(0, self.max_time_axis, 10000)
+        self.time = np.linspace(0, self.max_time_axis, 20000) 
         self.signal = np.zeros_like(self.time)
         self.noise_signal = np.zeros_like(self.time)
 
@@ -33,7 +33,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.mixer.export_button.clicked.connect(self.export_signal)
 
     def initUI(self):
-        self.setWindowTitle("Smapling Studio")
+        self.setWindowTitle("Sampling Studio")
         self.setWindowIcon(QIcon("style/icons/logo.png"))
         self.setGeometry(100, 100, 1200, 800)
 
@@ -181,36 +181,52 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         self.sample_and_reconstruct()
 
-    def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
-        # Whittaker-Shannon (Sinc) Interpolation
+
         """
         x: sample positions (sampling_t)
         s: sample values (sampled_signal)
         t: target positions (continuous time for reconstruction)
         """
-        def sinc_interp(x, s, t):
+    def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
+        """
+        1. sinc: for each target time (t_i), we sum contributions from all samples (s) weighted by sinc function based on 
+          distance from each sample position (x). Good for bandlimited signals / signal is sampled above Nyquist rate
+        """
+        def sinc_interp(x, s, t):  #sinc(x) = sin(πx)/(πx) (Whittaker-Shannon)
             T = x[1] - x[0]
             return np.array([np.sum(s * np.sinc((t_i - x) / T)) for t_i in t])
 
-        # Zero-order hold interpolation
-        def zero_order_hold(x, s, t):
+
+        """
+        2. zero_order : for each target time (t_i), it finds index of  last sample <= t_i.. and uses its val. to hold
+          constant until next sampling point. Simpole but might lead to significant distortion, especially for rapidly changing signals.
+        """
+        def zero_order_hold(x, s, t):  #maintain last sampled value until next sample is taken 
             s_interp = np.zeros_like(t)
             for i, t_i in enumerate(t):
                 idx = np.searchsorted(x, t_i) - 1
                 s_interp[i] = s[idx]
             return s_interp
 
-        # linear interpolation
-        def linear_interp(x, s, t):
+
+        """
+        3. linear : for each target time (t_i), it uses np.interp function to perform linear interpolation between two nearest sample points.
+          Has smoother transition than Zero but is still bad for non-linear signals.
+        """
+        def linear_interp(x, s, t):  #connect sample points linearly
             return np.interp(t, x, s)
 
-        # cubic spline interpolation
-        def cubic_spline_interp(x, s, t):
+        """
+        4.cubic
+        """
+        def cubic_spline_interp(x, s, t): #connects by cubic functions leading to smoother connection
             cs = CubicSpline(x, s)
             return cs(t)
 
-        # lagrang interpolation
-        def lagrange_interp(x, s, t):
+        """
+        5.lagrange: good for small number of points, but can be hard to compute for large datasets and may lead to oscillations between points
+        """
+        def lagrange_interp(x, s, t): #makes a polynomial through all sample points
             poly = lagrange(x, s)
             return poly(t)
 
@@ -237,7 +253,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
                 self.signal) else self.signal
 
         sample_points = np.linspace(0, len(
-            self.time) - 1, (self.sampling_rate + 2) * self.max_time_axis).astype(int)
+            self.time) - 1, (self.sampling_rate * self.max_time_axis + 2)).astype(int)
         sample_points = sample_points[1:-1]
         # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)
         sampled_time = self.time[sample_points]
@@ -261,30 +277,32 @@ class SignalSamplingApp(QtWidgets.QWidget):
                                 pen='#007AFF', name="Original Signal")
         if sampled_time is not None and sampled_signal is not None:
             self.original_plot.plot(
-                sampled_time, sampled_signal, pen=None, symbol='o', symbolBrush='r')
+                sampled_time, sampled_signal, pen=None, symbol='o', symbolBrush='r')  #highlight sampled points
 
         if reconstructed_signal is not None:
             self.reconstructed_plot.plot(
-                self.time, reconstructed_signal, pen='#007AFF')
+                self.time, reconstructed_signal, pen='#007AFF') #reconstruct signal
 
-            error = noised_signal - reconstructed_signal
+            error = noised_signal - reconstructed_signal  #calc. error graph (WITHOUT NOISE for constructed signals)
             text = f'avg error: {round(np.mean(np.abs(error)), 2)}'
 
             title = f"""
-            <div style='text-align: center;'>
-                <span style='font-size: 10pt;'><b>Error Graph</b></span><br>
+            <div style='text-align: center;font-family: "Segoe UI", sans-serif;'>
+                <span style='font-size: 10pt;'>Error Graph</span><br>
                 <span style='font-size: 8pt;'><b>{text}</b></span>
             </div>"""
             self.error_plot.setTitle(title)
             self.error_plot.plot(self.time, error, pen='#007AFF')
-            freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
-            fft_original = np.abs(fft(reconstructed_signal))
 
-            fft_original[1:] *= 2
-            fft_original /= len(self.time)
+            
+            freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
+            fft_original = np.abs(fft(reconstructed_signal)) #magnitude of freq component of reconstructed
+
+            fft_original[1:] *= 2 #symmetric freqs 
+            fft_original /= len(self.time)  #normalize freqs
 
             half_len = len(freqs) // 2
-            fft_original[half_len:] = 0
+            fft_original[half_len:] = 0 #zero-ing negative frequencies
 
             # shift_value = (self.f_max / 10)
             # shifted_freqs = freqs - shift_value
@@ -308,7 +326,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         fft_original[1:] *= 2
         fft_original /= len(self.time)
 
-        # fft_original[:neg_freqs] = 0
         half_len = len(freqs) // 2
         fft_original[half_len:] = 0
 
@@ -348,15 +365,16 @@ class SignalSamplingApp(QtWidgets.QWidget):
         # freqs - self.sampling_rate, fft_original, pen=pg.mkPen('r', width=2), name="Before Sampling Frequency")
 
         self.set_same_viewing_range()
-        self.frequency_plot.setXRange(-50, 50)
+        self.frequency_plot.setXRange(-20, 20)
         self.frequency_plot.setYRange(0, 1)
 
     def add_noise(self):
-        snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)
-        signal_power = np.mean(self.signal ** 2)
-        noise_power = signal_power / snr_linear
+        snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)   #convert SNR from dB to linear scale
+        signal_power = np.mean(self.signal ** 2)   #calculate signal power
+        noise_power = signal_power / snr_linear   #calculate noise power to achieve req. SNR
         self.noise_signal = np.random.normal(
-            0, np.sqrt(noise_power), self.signal.shape)
+            0, np.sqrt(noise_power), self.signal.shape)  #generate Gaussian noise with: mean = 0 , calculated standard deviation
+
 
     def set_same_viewing_range(self):
         x_min, x_max = min(self.time), max(self.time)
