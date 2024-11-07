@@ -78,7 +78,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         reconstruction_layout.addWidget(self.reconstruction_method_label)
         self.reconstruction_method_comboBox = QtWidgets.QComboBox(self)
         self.reconstruction_method_comboBox.addItems(
-            ["Whittaker-Shanon (sinc)", "Zero-Order Hold", "Linear", "Cubic Spline", "Lagrange"])
+            ["Whittaker-Shanon (sinc)", "Zero-Order Hold", "Linear", "Cubic Spline"])
         self.reconstruction_method_comboBox.currentTextChanged.connect(
             self.update_reconstruction_method)
         reconstruction_layout.addWidget(self.reconstruction_method_comboBox)
@@ -101,7 +101,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.sampling_slider.setObjectName("samplingSlider")
 
         self.sampling_label = QtWidgets.QLabel(
-            f"Sampling Frequency: {self.sampling_rate}")
+            f"Sampling Frequency: {self.sampling_rate} Hz")
         control_panel.addWidget(self.sampling_slider)
         control_panel.addWidget(self.sampling_label)
 
@@ -146,7 +146,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.sampling_slider.setValue(self.sampling_rate)
 
             self.sampling_label.setText(
-                f"Sampling Frequency: {self.sampling_slider.value()}")
+                f"Sampling Frequency: {self.sampling_slider.value()} Hz")
 
     def update_sampling(self):
 
@@ -160,18 +160,17 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         self.sample_and_reconstruct()
 
-        """
-        x: sample positions (sampling_t)
-        s: sample values (sampled_signal)
-        t: target positions (continuous time for reconstruction)
-        """
-
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
         """
         1. sinc: for each target time (t_i), we sum contributions from all samples (s) weighted by sinc function based on 
           distance from each sample position (x). Good for bandlimited signals / signal is sampled above Nyquist rate
         """
         def sinc_interp(x, s, t):  # sinc(x) = sin(πx)/(πx) (Whittaker-Shannon)
+            """
+            x: sample positions (sampling_t)
+            s: sample values (sampled_signal)
+            t: target positions (continuous time for reconstruction)
+            """
             T = x[1] - x[0]
             return np.array([np.sum(s * np.sinc((t_i - x) / T)) for t_i in t])
 
@@ -225,12 +224,10 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if self.interp_method is None:
             self.update_reconstruction_method()
 
-        noised_signal = self.noise_signal + \
-            self.signal if len(self.noise_signal) == len(
-                self.signal) else self.signal
+        noised_signal = (self.noise_signal + self.signal)
 
         sample_points = np.linspace(0, len(
-            self.time) - 1, (self.sampling_rate * self.max_time_axis + 2)).astype(int)
+            self.time) - 1, (self.sampling_rate * self.max_time_axis + 2)).astype(int)  # (start, stop, #samples)
         sample_points = sample_points[1:-1]
         # sample_points = np.arange(0, len(self.time) - 1, len(self.time)/self.sampling_rate).astype(int)
         sampled_time = self.time[sample_points]
@@ -247,9 +244,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.error_plot.clear()
         self.frequency_plot.clear()
 
-        noised_signal = self.noise_signal + \
-            self.signal if len(self.noise_signal) == len(
-                self.signal) else self.signal
+        noised_signal = self.noise_signal + self.signal
+
         self.original_plot.plot(self.time, noised_signal,
                                 pen='#007AFF', name="Original Signal")
         if sampled_time is not None and sampled_signal is not None:
@@ -260,6 +256,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.reconstructed_plot.plot(
                 self.time, reconstructed_signal, pen='#007AFF')  # reconstruct signal
 
+            # calc. error graph (WITHOUT NOISE for constructed signals)
             # calc. error graph (WITHOUT NOISE for constructed signals)
             error = self.signal - reconstructed_signal
             text = f'error: {round(np.mean(np.abs(error)), 2)}'
@@ -272,79 +269,37 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.error_plot.setTitle(title)
             self.error_plot.plot(self.time, error, pen='#007AFF')
 
-            freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
+            freqs = fftfreq(
+                len(self.time), self.time[1] - self.time[0])  # x axis
             # magnitude of freq component of reconstructed
-            fft_original = np.abs(fft(reconstructed_signal))
+            fft_original = np.abs(fft(reconstructed_signal))  # y - axis
 
-            fft_original[1:] *= 2  # symmetric freqs
             fft_original /= len(self.time)  # normalize freqs
 
             # half_len = len(freqs) // 2
             # fft_original[half_len:] = 0 #zero-ing negative frequencies
 
-            # shift_value = (self.f_max / 10)
-            # shifted_freqs = freqs - shift_value
-
             self.sampling_slider.setMaximum(4 * self.f_max)
             self.frequency_plot.plot(
                 freqs, fft_original, pen=pg.mkPen('g', width=5))
-            self.frequency_plot.setXRange(-50, 50)
-            self.frequency_plot.setYRange(0, 1)
-        else:
-            self.error_plot.setTitle(f"Error Graph")
 
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
 
         fft_original = np.abs(fft(noised_signal))
 
-        pos_freqs = freqs[:len(freqs)//2]
-        neg_freqs = -pos_freqs
-
-        fft_original[1:] *= 2
         fft_original /= len(self.time)
 
-        # half_len = len(freqs) // 2
-        # fft_original[half_len:] = 0
-
-        # shifted_freqs = freqs - (self.f_max / 10)
-
         self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
-        self.frequency_plot.setXRange(-50, 50)
-        self.frequency_plot.setYRange(0, 1)
 
-        # signal_index, component_index = self.mixer.get_selected_signal_index()
-        # if signal_index is not None:
-        #     print(len(self.mixer.signals[signal_index]))
-        # if len(self.mixer.signals[signal_index]) < 2:
-        if self.sampling_rate == 2 * self.f_max:
-            overlap_factor = self.sampling_rate*(1/(2*self.f_max))
-            self.frequency_plot.plot(
-                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(
-                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-        elif self.sampling_rate < 2 * self.f_max:
-            overlap_factor = self.sampling_rate*(1/(2*self.f_max))
-            self.frequency_plot.plot(
-                freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(
-                freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
-        else:
-            spacing_factor = self.sampling_rate * (1/(2*self.f_max))
-            self.frequency_plot.plot(
-                freqs - spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
-            self.frequency_plot.plot(
-                freqs + spacing_factor, fft_original, pen=pg.mkPen('r', width=2))
-
-        # self.frequency_plot.plot(
-        # freqs + self.sampling_rate, fft_original, pen=pg.mkPen('r', width=2), name="After Sampling Frequency")
-
-        # self.frequency_plot.plot(
-        # freqs - self.sampling_rate, fft_original, pen=pg.mkPen('r', width=2), name="Before Sampling Frequency")
+        overlap_factor = self.sampling_rate*(1/(2*self.f_max))
+        self.frequency_plot.plot(
+            freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+        self.frequency_plot.plot(
+            freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
 
         self.set_same_viewing_range()
         self.frequency_plot.setXRange(-20, 20)
-        self.frequency_plot.setYRange(0, 1)
 
     def add_noise(self):
         # convert SNR from dB to linear scale
@@ -376,7 +331,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         elif event.key() == Qt.Key_Right and self.sampling_rate < len(self.signal):
             self.sampling_rate += 1
             self.sample_and_reconstruct()
-        print('Sampling rate:', self.sampling_rate)
+        # print('Sampling rate:', self.sampling_rate)
 
     def export_signal(self):
         # file dialog to save CSV file
