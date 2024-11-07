@@ -99,7 +99,7 @@ class SignalMixer(QtWidgets.QWidget):
 
         layout.addWidget(control_container)
         
-        with open("style/mixer.qss", "r") as f:
+        with open("style/mixer.css", "r") as f:
             self.setStyleSheet(f.read())
 
     def update_snr_label(self):

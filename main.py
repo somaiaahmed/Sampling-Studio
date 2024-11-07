@@ -257,7 +257,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.reconstructed_plot.plot(
                 self.time, reconstructed_signal, pen='#007AFF') #reconstruct signal
 
-            error = self.signal - reconstructed_signal
+            error = noised_signal - reconstructed_signal  #calc. error graph (WITHOUT NOISE for constructed signals)
             text = f'avg error: {round(np.mean(np.abs(error)), 2)}'
 
             title = f"""
@@ -345,11 +345,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.frequency_plot.setYRange(0, 1)
 
     def add_noise(self):
-        snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)
-        signal_power = np.mean(self.signal ** 2)
-        noise_power = signal_power / snr_linear
+        snr_linear = 10 ** (self.mixer.snr_slider.value() / 10.0)   #convert SNR from dB to linear scale
+        signal_power = np.mean(self.signal ** 2)   #calculate signal power
+        noise_power = signal_power / snr_linear   #calculate noise power to achieve req. SNR
         self.noise_signal = np.random.normal(
-            0, np.sqrt(noise_power), self.signal.shape)
+            0, np.sqrt(noise_power), self.signal.shape)  #generate Gaussian noise with: mean = 0 , calculated standard deviation
+
 
     def set_same_viewing_range(self):
         x_min, x_max = min(self.time), max(self.time)
