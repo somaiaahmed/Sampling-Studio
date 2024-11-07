@@ -286,10 +286,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
 
-        fft_original = np.abs(fft(noised_signal))
+        fft_original = np.abs(fft(self.signal))
 
         fft_original /= len(self.time)
 
+        # half_len = len(freqs) // 2
+        # fft_original[half_len:] = 0 #zero-ing negative frequencies
         self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
 
         overlap_factor = self.sampling_rate*(1/(2*self.f_max))
@@ -342,7 +344,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if file_name:
             try:
                 signal = np.insert(
-                    self.signal + self.noise_signal, 0, self.sampling_rate)
+                    self.signal + self.noise_signal, 0, self.f_max)
                 np.savetxt(file_name, signal, delimiter=",")
                 QMessageBox.information(
                     self, "Success", "File saved successfully!")
