@@ -23,38 +23,6 @@ QGraphicsView {
     margin: 10rem;     
 }
 
-
-QSlider {
-    background-color: transparent;
-    height: 20px;
-}
-
-QSlider::groove:horizontal {
-    background: lightgray;
-    height: 6px;
-    
-}
-
-QSlider::sub-page:horizontal {
-    background: #007AFF; /* Blue for the filled portion */
-    height: 6px;
-    
-}
-
-QSlider::add-page:horizontal {
-    background: lightgray; /* Gray for the unfilled portion */
-    height: 6px;
-    
-}
-
-QSlider::handle:horizontal {
-    background: white;
-    width: 20px;
-    height: 20px;
-    margin: -2px 0; /* Centers the handle in the groove */
-    border-radius: 5px;
-}
-
 QComboBox {
     background-color: #007AFF;    
     color: #FFFFFF;
@@ -89,10 +57,14 @@ QComboBox:hover {
     border: 1px solid #a0a0a0;
 }
 
-#samplingSlider{
-    max-width: 500px;
-}
 
 #controlPanel{
-    justify-content: space-between;
+    
+    background-color: #21787880;
+    padding: 8px;
+    border-radius: 5px;
+}
+
+QLabel {
+    background-color: transparent;
 }

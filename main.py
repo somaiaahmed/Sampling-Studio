@@ -10,6 +10,7 @@ from scipy.interpolate import interp1d, CubicSpline, lagrange
 from signal_mixer import SignalMixer
 from style.styling_methods import style_plot_widget
 from signal_construct import Signal
+from style.toggle import ToggleSwitch
 
 
 class SignalSamplingApp(QtWidgets.QWidget):
@@ -60,42 +61,16 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         # horizontal layout for plots & mixer
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addLayout(plot_grid, 65)
-        h_layout.addWidget(self.mixer)
-        layout.addLayout(h_layout)
+        right_panel_layout = QtWidgets.QVBoxLayout()
+        
+
+        right_panel_layout.addWidget(self.mixer)
 
         # slider for sampling:
-        control_panel = QtWidgets.QHBoxLayout()
+        control_panel = QtWidgets.QVBoxLayout()
+        toggle_layout = QtWidgets.QHBoxLayout()
         self.sampling_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sampling_slider.setMinimum(2)
-
-        self.sampling_slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        self.sampling_slider.setTickInterval(1)
-        self.sampling_slider.setValue(self.sampling_rate)
-        self.sampling_slider.valueChanged.connect(self.update_sampling)
-        self.sampling_slider.setObjectName("samplingSlider")
-
-        self.sampling_label = QtWidgets.QLabel(
-            f"Sampling Frequency: {self.sampling_rate}")
-        control_panel.addWidget(self.sampling_slider)
-        control_panel.addWidget(self.sampling_label)
-        layout.addLayout(control_panel)
-
-        # combobox for normalized freq. selection
-        normalized_layout = QtWidgets.QHBoxLayout()
-        self.normalized_label = QtWidgets.QLabel("Normalized Frequency: ")
-        normalized_layout.addWidget(self.normalized_label)
-        control_panel.addLayout(normalized_layout)
-        layout.addLayout(control_panel)
-        self.freq_comboBox = QComboBox()
-
-        # options from 0*f_max to 4*f_max
-        for i in range(5):
-            self.freq_comboBox.addItem(f"{i} * f_max", i)
-        self.freq_comboBox.setCurrentIndex(1)
-        self.freq_comboBox.currentIndexChanged.connect(
-            self.update_sampling_from_combobox)
-        control_panel.addWidget(self.freq_comboBox)
+        # self.sampling_slider.setMinimum(2)
 
         # reconstruction method combobox
         reconstruction_layout = QtWidgets.QHBoxLayout()
@@ -109,16 +84,39 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.update_reconstruction_method)
         reconstruction_layout.addWidget(self.reconstruction_method_comboBox)
         control_panel.addLayout(reconstruction_layout)
-        layout.addLayout(control_panel)
 
-    # based on selected normalized freq.
-    def update_sampling_from_combobox(self):
-        multiplier = self.freq_comboBox.currentData()
-        self.sampling_rate = max(2, int(multiplier * self.f_max))
+        # layout.addLayout(control_panel)
+
+        self.toggle = ToggleSwitch()
+        self.toggle.setChecked(False)
+        self.toggle.stateChanged.connect(self.update_sampling_slider)
+
+        normalized_label = QtWidgets.QLabel("Normalized Mode")
+        toggle_layout.addWidget(normalized_label)
+        toggle_layout.addWidget(self.toggle)
+
+        control_panel.addLayout(toggle_layout)
+
         self.sampling_slider.setValue(self.sampling_rate)
-        self.sampling_label.setText(
+        self.sampling_slider.valueChanged.connect(self.update_sampling)
+        self.sampling_slider.setObjectName("samplingSlider")
+
+        self.sampling_label = QtWidgets.QLabel(
             f"Sampling Frequency: {self.sampling_rate}")
-        self.sample_and_reconstruct()
+        control_panel.addWidget(self.sampling_slider)
+        control_panel.addWidget(self.sampling_label)
+
+        control_panel_widget = QtWidgets.QWidget()
+        control_panel_widget.setLayout(control_panel)
+        control_panel_widget.setObjectName("controlPanel")
+
+        right_panel_layout.addWidget(control_panel_widget)
+
+        
+
+        h_layout.addLayout(plot_grid,4)
+        h_layout.addLayout(right_panel_layout,1)
+        layout.addLayout(h_layout)
 
     def open_mixer(self):
         self.mixer.show()
@@ -137,24 +135,50 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.sample_and_reconstruct()
 
     def update_sampling_slider(self):
-        self.sampling_slider.setMaximum(4 * self.f_max)  # max = 4*f_max4
+        # Set maximum value to 4 * f_max
+        self.sampling_slider.setMaximum(4 * self.f_max)
 
-        self.sampling_slider.setTickInterval(
-            int(self.f_max))  # update tick interval to f_max
-        # adjust current value to be within the new range
-        self.sampling_slider.setValue(min(self.sampling_rate, 4 * self.f_max))
+        # 4-value slider mode
+        if self.toggle._checked:
+            self.sampling_slider.setSingleStep(self.f_max)
+            self.sampling_slider.setTickPosition(
+                QtWidgets.QSlider.TicksBothSides)
+            self.sampling_slider.setTickInterval(self.f_max)
+
+            # Snap to nearest multiple of f_max
+            self.sampling_rate = round(
+                self.sampling_rate / self.f_max) * self.f_max
+
+            self.sampling_slider.setValue(self.sampling_rate)
+
+        else:  # Normal mode
+            # Set step to 1 for free dragging
+            self.sampling_slider.setSingleStep(1)
+            self.sampling_slider.setTickPosition(QtWidgets.QSlider.NoTicks)
+
+            self.sampling_slider.setValue(self.sampling_rate)
+
+        # Update the label
         self.sampling_label.setText(
             f"Sampling Frequency: {self.sampling_slider.value()}")
 
     def update_sampling(self):
-        self.sampling_rate = self.sampling_slider.value()
-        if self.sampling_rate < 2:
+        if self.toggle._checked:  # 4-value slider mode
+
+            self.sampling_rate = self.sampling_slider.value()
+            # Ensure the sampling rate is always a multiple of f_max
+            self.sampling_rate = round(
+                self.sampling_rate / self.f_max) * self.f_max
+        else:  # Normal mode
+            self.sampling_rate = self.sampling_slider.value()
+
+        if self.sampling_rate < 2:  # Enforce minimum value of 2
             self.sampling_rate = 2
 
-        self.sampling_slider.setValue(
-            self.sampling_rate)  # resetting slider to (2)
+        self.sampling_slider.setValue(self.sampling_rate)
         self.sampling_label.setText(
             f"Sampling Frequency: {self.sampling_rate}")
+
         self.sample_and_reconstruct()
 
     def update_reconstruction_method(self, text='Whittaker-Shanon (sinc)'):
@@ -275,11 +299,10 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
-        print("freqs", freqs)
 
         fft_original = np.abs(fft(noised_signal))
 
-        pos_freqs = freqs[:len(freqs)//2] 
+        pos_freqs = freqs[:len(freqs)//2]
         neg_freqs = -pos_freqs
 
         fft_original[1:] *= 2
@@ -323,7 +346,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         # self.frequency_plot.plot(
         # freqs - self.sampling_rate, fft_original, pen=pg.mkPen('r', width=2), name="Before Sampling Frequency")
-
 
         self.set_same_viewing_range()
         self.frequency_plot.setXRange(-50, 50)

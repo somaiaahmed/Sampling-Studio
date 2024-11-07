@@ -21,8 +21,6 @@ class SignalMixer(QtWidgets.QWidget):
         self.mixed_signal = np.zeros_like(self.time)  
 
     def initUI(self):
-        self.setWindowTitle("Signal Mixer")
-        self.setGeometry(200, 200, 400, 300)
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
