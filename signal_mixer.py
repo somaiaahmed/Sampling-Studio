@@ -234,9 +234,9 @@ class SignalMixer(QtWidgets.QWidget):
             phase_rad = np.deg2rad(phase)
             mixed_signal += amplitude * np.sin(2 * np.pi * frequency * time + phase_rad)
             f_max = frequency if frequency > f_max else f_max
-        # elif isinstance(signal, Signal):
-        #     mixed_signal += signal.data 
-        #     f_max = int(signal.f_sample) if int(signal.f_sample) > f_max else f_max
+        elif isinstance(signal, Signal):
+            mixed_signal += signal.data 
+            f_max = int(signal.f_sample) if int(signal.f_sample) > f_max else f_max
         else:
             raise ValueError("Unsupported signal format: {}".format(signal))
 

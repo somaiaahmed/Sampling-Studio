@@ -139,6 +139,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         if self.toggle._checked:
             self.sampling_slider.setValue(self.sampling_rate)
             sampling_ratio = self.sampling_rate / self.f_max
+            sampling_ratio = round(sampling_ratio, 2) 
             self.sampling_label.setText(
                 f"Sampling Frequency: {sampling_ratio} max frequency")
 
@@ -280,8 +281,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
             # fft_original[half_len:] = 0 #zero-ing negative frequencies
 
             self.sampling_slider.setMaximum(4 * self.f_max)
-            self.frequency_plot.plot(
-                freqs, fft_original, pen=pg.mkPen('g', width=5))
+            # self.frequency_plot.plot(
+            #     freqs, fft_original, pen=pg.mkPen('g', width=5))
 
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
@@ -292,13 +293,14 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         # half_len = len(freqs) // 2
         # fft_original[half_len:] = 0 #zero-ing negative frequencies
-        self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
+        # self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
+        self.frequency_plot.plot(freqs, fft_original, pen=pg.mkPen('#007AFF', width=3))
 
-        overlap_factor = self.sampling_rate*(1/(2*self.f_max))
+        # overlap_factor = self.sampling_rate*(1/(0.05*self.f_max))
         self.frequency_plot.plot(
-            freqs + overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            freqs + self.sampling_rate + 0.2, fft_original, pen=pg.mkPen('r', width=2))
         self.frequency_plot.plot(
-            freqs - overlap_factor, fft_original, pen=pg.mkPen('r', width=2))
+            freqs - self.sampling_rate - 0.2, fft_original, pen=pg.mkPen('r', width=2))
 
         self.set_same_viewing_range()
         self.frequency_plot.setXRange(-20, 20)
