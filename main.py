@@ -219,7 +219,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.interp_method = sinc_interp
 
         self.sample_and_reconstruct()
-
+    
     def sample_and_reconstruct(self):
         self.add_noise()
         if self.interp_method is None:
@@ -227,15 +227,16 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         noised_signal = (self.noise_signal + self.signal)
 
-        sample_points = np.linspace(0, len(
-            self.time) - 1, (self.sampling_rate * self.max_time_axis + 2)).astype(int)  # (start, stop, #samples)
-        sample_points = sample_points[1:-1]
-        
+        # 1.excluding first and last point ==> good reconstruction at 2 * fmax
+            # sample_points = np.linspace(0, len(self.time) - 1, (self.sampling_rate * self.max_time_axis)).astype(int)  # (start, stop, #samples)
+            # sample_points = sample_points[1:-1]
+
+        # good reconstruction at 2 * fmax + 1
+        sample_points = np.arange(0, len(self.time) - 1, len(self.time)/(self.sampling_rate*self.max_time_axis)).astype(int)
         sampled_time = self.time[sample_points]
         sampled_signal = noised_signal[sample_points]
 
-        reconstructed_signal = self.interp_method(
-            sampled_time, sampled_signal, self.time)
+        reconstructed_signal = self.interp_method(sampled_time, sampled_signal, self.time)
 
         self.update_plots(sampled_time, sampled_signal, reconstructed_signal)
 
