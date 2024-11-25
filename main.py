@@ -288,7 +288,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
 
-        fft_original = np.abs(fft(self.signal))
+        fft_original = 2*np.abs(fft(self.signal))
 
         fft_original /= len(self.time)
 
@@ -304,7 +304,7 @@ class SignalSamplingApp(QtWidgets.QWidget):
             freqs - self.sampling_rate - 0.2, fft_original, pen=pg.mkPen('r', width=2))
 
         self.set_same_viewing_range()
-        self.frequency_plot.setXRange(-20, 20)
+        self.frequency_plot.setXRange(-max(self.f_max, 20), max(self.f_max, 20))
 
     def add_noise(self):
         # convert SNR from dB to linear scale
