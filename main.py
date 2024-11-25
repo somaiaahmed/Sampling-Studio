@@ -200,12 +200,12 @@ class SignalSamplingApp(QtWidgets.QWidget):
             cs = CubicSpline(x, s)
             return cs(t)
 
-        """
-        5.lagrange: good for small number of points, but can be hard to compute for large datasets and may lead to oscillations between points
-        """
-        def lagrange_interp(x, s, t):  # makes a polynomial through all sample points
-            poly = lagrange(x, s)
-            return poly(t)
+        # """
+        # 5.lagrange: good for small number of points, but can be hard to compute for large datasets and may lead to oscillations between points
+        # """
+        # def lagrange_interp(x, s, t):  # makes a polynomial through all sample points
+        #     poly = lagrange(x, s)
+        #     return poly(t)
 
         if text == 'Zero-Order Hold':
             self.interp_method = zero_order_hold
@@ -213,8 +213,8 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.interp_method = linear_interp
         elif text == 'Cubic Spline':
             self.interp_method = cubic_spline_interp
-        elif text == 'Lagrange':
-            self.interp_method = lagrange_interp
+        # elif text == 'Lagrange':
+        #     self.interp_method = lagrange_interp
         else:
             self.interp_method = sinc_interp
 
@@ -254,36 +254,21 @@ class SignalSamplingApp(QtWidgets.QWidget):
             self.original_plot.plot(
                 sampled_time, sampled_signal, pen=None, symbol='o', symbolBrush='r')  # highlight sampled points
 
-        if reconstructed_signal is not None:
-            self.reconstructed_plot.plot(
-                self.time, reconstructed_signal, pen='#007AFF')  # reconstruct signal
+        self.reconstructed_plot.plot(
+            self.time, reconstructed_signal, pen='#007AFF')  # reconstruct signal
 
-            # calc. error graph (WITHOUT NOISE for constructed signals)
-            # calc. error graph (WITHOUT NOISE for constructed signals)
-            error = self.signal - reconstructed_signal
-            text = f'error: {round(np.mean(np.abs(error)), 2)}'
+        # calc. error graph (WITHOUT NOISE for constructed signals)
+        # calc. error graph (WITHOUT NOISE for constructed signals)
+        error = self.signal - reconstructed_signal
+        text = f'error: {round(np.mean(np.abs(error)), 2)}'
 
-            title = f"""
-            <div style='text-align: center;font-family: "Segoe UI", sans-serif;'>
-                <span style='font-size: 10pt;'>Error Graph</span><br>
-                <span style='font-size: 8pt;'><b>{text}</b></span>
-            </div>"""
-            self.error_plot.setTitle(title)
-            self.error_plot.plot(self.time, error, pen='#007AFF')
-
-            freqs = fftfreq(
-                len(self.time), self.time[1] - self.time[0])  # x axis
-            # magnitude of freq component of reconstructed
-            fft_original = np.abs(fft(reconstructed_signal))  # y - axis
-
-            fft_original /= len(self.time)  # normalize freqs
-
-            # half_len = len(freqs) // 2
-            # fft_original[half_len:] = 0 #zero-ing negative frequencies
-
-            self.sampling_slider.setMaximum(4 * self.f_max)
-            # self.frequency_plot.plot(
-            #     freqs, fft_original, pen=pg.mkPen('g', width=5))
+        title = f"""
+        <div style='text-align: center;font-family: "Segoe UI", sans-serif;'>
+            <span style='font-size: 10pt;'>Error Graph</span><br>
+            <span style='font-size: 8pt;'><b>{text}</b></span>
+        </div>"""
+        self.error_plot.setTitle(title)
+        self.error_plot.plot(self.time, error, pen='#007AFF')
 
         # Repeat for the Noised Signal
         freqs = fftfreq(len(self.time), self.time[1] - self.time[0])
@@ -292,9 +277,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
 
         fft_original /= len(self.time)
 
-        # half_len = len(freqs) // 2
-        # fft_original[half_len:] = 0 #zero-ing negative frequencies
-        # self.frequency_plot.plot(freqs, fft_original, pen='#007AFF')
         self.frequency_plot.plot(freqs, fft_original, pen=pg.mkPen('#007AFF', width=3))
 
         # overlap_factor = self.sampling_rate*(1/(0.05*self.f_max))
@@ -327,8 +309,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         self.reconstructed_plot.setYRange(y_min, y_max)
         self.error_plot.setYRange(y_min, y_max)
 
-        self.frequency_plot.setXRange(0, 2 * self.f_max)
-
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Left and self.sampling_rate > 2:
             self.sampling_rate -= 1
@@ -336,7 +316,6 @@ class SignalSamplingApp(QtWidgets.QWidget):
         elif event.key() == Qt.Key_Right and self.sampling_rate < len(self.signal):
             self.sampling_rate += 1
             self.sample_and_reconstruct()
-        # print('Sampling rate:', self.sampling_rate)
 
     def export_signal(self):
         # file dialog to save CSV file
