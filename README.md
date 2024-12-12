@@ -58,7 +58,7 @@ Sampling Studio is a desktop application designed to demonstrate the concepts of
      - F3 = 10Hz, phase3 = 90 degrees
      - Sampling at 21 Hz is perfect and shows only the 10Hz because the 3Hz at different phases cancel each other.
 
-   ![scenario 3](style/scenario3.jpg)
+   ![scenario 3](style/scenario4.jpg)
 
    - **Scenario 4:** 
       - F1 = 5Hz, phase1 = 0 degrees
@@ -66,7 +66,7 @@ Sampling Studio is a desktop application designed to demonstrate the concepts of
       - Sampling at 10 Hz: splits them.
       - Sampling at 11 Hz:  is good.
 
-   ![scenario 4](style/scenario4.jpg)
+   ![scenario 4](style/scenario3.jpg)
 
 
 ## Installation
