@@ -44,8 +44,30 @@ Sampling Studio is a desktop application designed to demonstrate the concepts of
     - Sampling at ≥12 Hz: Perfect reconstruction.
     - Sampling at 4 Hz: Aliasing effect shows a single frequency.
     - Sampling at 8 Hz: Partial aliasing.
-  - **Scenario 2:** [Description of second scenario]
-  - **Scenario 3:** [Description of third scenario]
+
+    ![scenario 1](style/scenario1.png)
+
+  - **Scenario 2:** Mix of 3 Hz and 10 Hz sinusoidals.
+      - Sampling at 10 Hz: reconstructed signal is the 3Hz only.
+
+   ![scenario 2](style/scenario2.jpg)
+
+  - **Scenario 3:** 
+     - F1 = 3Hz, phase1 = 0 degrees
+     - F2 = 3Hz, phase2 = 180 degrees
+     - F3 = 10Hz, phase3 = 90 degrees
+     - Sampling at 21 Hz is perfect and shows only the 10Hz because the 3Hz at different phases cancel each other.
+
+   ![scenario 3](style/scenario3.jpg)
+
+   - **Scenario 4:** 
+      - F1 = 5Hz, phase1 = 0 degrees
+      - F2 = 4Hz, phase2= 180 degrees 
+      - Sampling at 10 Hz: splits them.
+      - Sampling at 11 Hz:  is good.
+
+   ![scenario 4](style/scenario4.jpg)
+
 
 ## Installation
 1. Clone the repository:
@@ -59,7 +81,7 @@ Sampling Studio is a desktop application designed to demonstrate the concepts of
 
 3. Run the application:
    ```bash
-   python app.py
+   python main.py
    ```
 
 ## How to Use
